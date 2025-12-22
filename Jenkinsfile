@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         PYTHONUNBUFFERED = '1'
+        EMAIL_TO = 'vishal.yadav.sys@gmail.com'
     }
 
     stages {
@@ -40,6 +41,21 @@ pipeline {
             }
         }
 
+        stage('Send HTML Email') {
+            steps {
+                script {
+                    def htmlReport = readFile 'output/uptime_report.html'
+
+                    emailext(
+                        subject: "SaaS Application Uptime Report – Weekly & Quarterly",
+                        body: htmlReport,
+                        mimeType: 'text/html',
+                        to: env.EMAIL_TO
+                    )
+                }
+            }
+        }
+
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
@@ -49,7 +65,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Uptime report generated successfully'
+            echo '✅ Report generated and HTML email sent successfully'
         }
         failure {
             echo '❌ Pipeline failed'
