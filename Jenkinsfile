@@ -14,12 +14,20 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Setup Virtual Environment') {
             steps {
                 sh '''
                   python3 --version
-                  python3 -m pip install --upgrade pip
-                  python3 -m pip install -r requirements.txt
+                  python3 -m venv venv
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                  ./venv/bin/python -m pip install --upgrade pip
+                  ./venv/bin/pip install -r requirements.txt
                 '''
             }
         }
@@ -27,7 +35,7 @@ pipeline {
         stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  python3 generate_report.py
+                  ./venv/bin/python generate_report.py
                 '''
             }
         }
