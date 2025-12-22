@@ -1,0 +1,4 @@
+output/
+logo.txt
+__pycache__/
+*.pyc
