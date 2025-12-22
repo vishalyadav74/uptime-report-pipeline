@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         PYTHONUNBUFFERED = '1'
-        EMAIL_TO = 'vishal.yadav.sys@gmail.com'
+        EMAIL_TO = 'yv741518@gmail.com'
     }
 
     stages {
@@ -50,7 +50,9 @@ pipeline {
                         subject: "SaaS Application Uptime Report – Weekly & Quarterly",
                         body: htmlReport,
                         mimeType: 'text/html',
-                        to: env.EMAIL_TO
+                        to: env.EMAIL_TO,
+                        from: 'Jenkins <yv741518@gmail.com>',
+                        replyTo: 'yv741518@gmail.com'
                     )
                 }
             }
@@ -65,7 +67,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Report generated and HTML email sent successfully'
+            echo '✅ Report generated and email sent to yv741518@gmail.com'
         }
         failure {
             echo '❌ Pipeline failed'
