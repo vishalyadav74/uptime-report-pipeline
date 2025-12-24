@@ -5,6 +5,10 @@ pipeline {
         file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel File')
     }
 
+    environment {
+        EXCEL_PATH = "${WORKSPACE}/${params.UPTIME_EXCEL}"
+    }
+
     stages {
 
         stage('Checkout Code') {
@@ -27,8 +31,8 @@ pipeline {
         stage('Generate Report') {
             steps {
                 sh '''
-                  echo "Uploaded file: ${params.UPTIME_EXCEL}"
-                  export UPTIME_EXCEL=${WORKSPACE}/${params.UPTIME_EXCEL}
+                  echo "Uploaded Excel: $EXCEL_PATH"
+                  export UPTIME_EXCEL="$EXCEL_PATH"
                   ./venv/bin/python generate_report.py
                 '''
             }
