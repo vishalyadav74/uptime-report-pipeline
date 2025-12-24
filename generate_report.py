@@ -1,6 +1,7 @@
 import pandas as pd
 from jinja2 import Template
 import os
+import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
@@ -11,16 +12,21 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 EXCEL_FILE = os.getenv("UPTIME_EXCEL")
 
 if not EXCEL_FILE or not os.path.exists(EXCEL_FILE):
-    raise Exception("❌ UPTIME_EXCEL file not provided or not found. Upload Excel via Jenkins File Parameter.")
+    raise Exception("❌ UPTIME_EXCEL not provided. Upload Excel via Jenkins File Parameter.")
 
 print(f"📄 Using Excel file: {EXCEL_FILE}")
 
-# -----------------------------
-# CONFIG: DATE RANGES
-# -----------------------------
-WEEKLY_RANGE = "09th Dec – 15th Dec ’25"
-QUARTERLY_RANGE = "16th Sept – 15th Dec ’25"
 SLA_THRESHOLD = 99.9
+
+
+# -----------------------------
+# Helper: Extract Date Range from Excel Title
+# -----------------------------
+def extract_date_range(title):
+    if not title:
+        return "N/A"
+    match = re.search(r"\((.*?)\)", str(title))
+    return match.group(1) if match else "N/A"
 
 
 # -----------------------------
@@ -28,7 +34,6 @@ SLA_THRESHOLD = 99.9
 # -----------------------------
 def clean_df(df):
     df = df.fillna("")
-
     for col in df.columns:
         if "uptime" in col.lower():
             try:
@@ -47,8 +52,7 @@ def to_minutes(val):
     try:
         if isinstance(val, str):
             v = val.lower()
-            hrs = 0
-            mins = 0
+            hrs = mins = 0
             if "hr" in v:
                 hrs = int(v.split("hr")[0].strip())
             if "min" in v:
@@ -69,10 +73,25 @@ weekly_sheet = sheet_map.get("weekly")
 quarterly_sheet = sheet_map.get("quarterly")
 
 if not weekly_sheet or not quarterly_sheet:
-    raise Exception("❌ Weekly or Quarterly sheet not found in Excel")
+    raise Exception("❌ Weekly or Quarterly sheet not found")
 
-weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, engine="openpyxl")
-quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, engine="openpyxl")
+# -----------------------------
+# Read Date Ranges from Excel A1
+# -----------------------------
+weekly_title = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, header=None, nrows=1).iloc[0, 0]
+quarterly_title = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, header=None, nrows=1).iloc[0, 0]
+
+WEEKLY_RANGE = extract_date_range(weekly_title)
+QUARTERLY_RANGE = extract_date_range(quarterly_title)
+
+print(f"📅 Weekly Range    : {WEEKLY_RANGE}")
+print(f"📅 Quarterly Range : {QUARTERLY_RANGE}")
+
+# -----------------------------
+# Load Actual Tables (skip title row)
+# -----------------------------
+weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, skiprows=1)
+quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, skiprows=1)
 
 weekly_df = clean_df(weekly_df)
 quarterly_df = clean_df(quarterly_df)
@@ -81,48 +100,27 @@ weekly_table = weekly_df.to_html(index=False, classes="uptime-table", escape=Fal
 quarterly_table = quarterly_df.to_html(index=False, classes="uptime-table", escape=False)
 
 # -----------------------------
-# MAJOR INCIDENT OF THE WEEK
-# (ONLY UNPLANNED OUTAGE + RCA)
+# MAJOR INCIDENT (OUTAGE ONLY)
 # -----------------------------
 weekly_df["_outage_mins"] = weekly_df["Outage Downtime"].apply(to_minutes)
 outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
 
 if outage_df.empty:
-    major_incident = {
-        "account": "N/A",
-        "outage": "0 mins",
-        "rca": ""
-    }
+    major_incident = {"account": "N/A", "outage": "0 mins"}
+    major_story = f"No unplanned outages observed during ({WEEKLY_RANGE})."
+else:
+    row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
+    account = row.get("Account Name", "N/A")
+    outage = row["_outage_mins"]
+    rca = str(row.get("RCA of Outage", "")).strip()
+
+    major_incident = {"account": account, "outage": f"{outage} mins"}
 
     major_story = (
-        f"No unplanned outages were observed during the week "
-        f"({WEEKLY_RANGE}). All applications remained stable."
+        f"<b>{account}</b> experienced the highest unplanned outage of "
+        f"<b>{outage} mins</b> during ({WEEKLY_RANGE}).<br>"
+        f"<b>Root Cause:</b> {rca if rca else 'RCA yet to be shared.'}"
     )
-else:
-    major_row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
-
-    account = major_row.get("Account Name", "N/A")
-    outage_mins = major_row.get("_outage_mins", 0)
-    rca_text = str(major_row.get("RCA of Outage", "")).strip()
-
-    major_incident = {
-        "account": account,
-        "outage": f"{outage_mins} mins",
-        "rca": rca_text
-    }
-
-    if rca_text:
-        major_story = (
-            f"<b>{account}</b> experienced the highest unplanned outage of "
-            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}).<br>"
-            f"<b>Root Cause:</b> {rca_text}"
-        )
-    else:
-        major_story = (
-            f"<b>{account}</b> experienced the highest unplanned outage of "
-            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}). "
-            f"Complete RCA yet to be shared by the concerned team."
-        )
 
 # -----------------------------
 # Render HTML
@@ -140,10 +138,10 @@ html = template.render(
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
 output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
+
 with open(output_file, "w", encoding="utf-8") as f:
     f.write(html)
 
-print("🔥 EXECUTIVE UPTIME REPORT (OUTAGE-ONLY, RCA-DRIVEN STORY) GENERATED")
-print(f"📤 Output file: {output_file}")
+print("🔥 EXECUTIVE UPTIME REPORT GENERATED")
+print(f"📤 Output: {output_file}")
