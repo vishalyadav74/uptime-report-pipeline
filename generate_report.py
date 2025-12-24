@@ -4,7 +4,16 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-EXCEL_FILE = os.path.join(BASE_DIR, "uptime_latest1.xlsx")
+
+# -----------------------------
+# EXCEL FILE (FROM JENKINS FILE PARAMETER)
+# -----------------------------
+EXCEL_FILE = os.getenv("UPTIME_EXCEL")
+
+if not EXCEL_FILE or not os.path.exists(EXCEL_FILE):
+    raise Exception("❌ UPTIME_EXCEL file not provided or not found. Upload Excel via Jenkins File Parameter.")
+
+print(f"📄 Using Excel file: {EXCEL_FILE}")
 
 # -----------------------------
 # CONFIG: DATE RANGES
@@ -60,7 +69,7 @@ weekly_sheet = sheet_map.get("weekly")
 quarterly_sheet = sheet_map.get("quarterly")
 
 if not weekly_sheet or not quarterly_sheet:
-    raise Exception("Weekly or Quarterly sheet not found")
+    raise Exception("❌ Weekly or Quarterly sheet not found in Excel")
 
 weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, engine="openpyxl")
 quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, engine="openpyxl")
@@ -73,7 +82,7 @@ quarterly_table = quarterly_df.to_html(index=False, classes="uptime-table", esca
 
 # -----------------------------
 # MAJOR INCIDENT OF THE WEEK
-# (ONLY OUTAGE DOWNTIME + RCA TEXT)
+# (ONLY UNPLANNED OUTAGE + RCA)
 # -----------------------------
 weekly_df["_outage_mins"] = weekly_df["Outage Downtime"].apply(to_minutes)
 outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
@@ -94,7 +103,7 @@ else:
 
     account = major_row.get("Account Name", "N/A")
     outage_mins = major_row.get("_outage_mins", 0)
-    rca_text = major_row.get("RCA of Outage", "").strip()
+    rca_text = str(major_row.get("RCA of Outage", "")).strip()
 
     major_incident = {
         "account": account,
@@ -102,7 +111,6 @@ else:
         "rca": rca_text
     }
 
-    # 🔥 RCA-DRIVEN STORY (NO ASSUMPTION)
     if rca_text:
         major_story = (
             f"<b>{account}</b> experienced the highest unplanned outage of "
@@ -119,7 +127,7 @@ else:
 # -----------------------------
 # Render HTML
 # -----------------------------
-with open(os.path.join(BASE_DIR, "uptime_template.html")) as f:
+with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
     template = Template(f.read())
 
 html = template.render(
@@ -133,7 +141,9 @@ html = template.render(
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
+output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
+with open(output_file, "w", encoding="utf-8") as f:
     f.write(html)
 
 print("🔥 EXECUTIVE UPTIME REPORT (OUTAGE-ONLY, RCA-DRIVEN STORY) GENERATED")
+print(f"📤 Output file: {output_file}")
