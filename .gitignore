@@ -1,11 +1,4 @@
-# Python
-__pycache__/
-*.pyc
-venv/
-
-# Jenkins / Runtime Output
 output/
 logo.txt
-
-# OS
-.DS_Store
+__pycache__/
+*.pyc
