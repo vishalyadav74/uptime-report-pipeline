@@ -2,22 +2,24 @@ import pandas as pd
 from jinja2 import Template
 import os
 import re
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+import sys
 
 # -------------------------------------------------
-# Excel from Jenkins file parameter
+# Validate Excel file input
 # -------------------------------------------------
-EXCEL_FILE = os.getenv("UPTIME_EXCEL")
+if len(sys.argv) < 2:
+    raise Exception("❌ Excel file path not provided")
 
-if not EXCEL_FILE or not os.path.exists(EXCEL_FILE):
-    raise Exception("❌ UPTIME_EXCEL not provided or file not found")
+EXCEL_FILE = sys.argv[1]
+
+if not os.path.exists(EXCEL_FILE):
+    raise Exception(f"❌ Excel file not found: {EXCEL_FILE}")
 
 print(f"📄 Using Excel file: {EXCEL_FILE}")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 SLA_THRESHOLD = 99.9
-
 
 # -------------------------------------------------
 # Helpers
@@ -66,7 +68,6 @@ def find_column(df, keywords):
             return col
     return None
 
-
 # -------------------------------------------------
 # Load sheets
 # -------------------------------------------------
@@ -80,7 +81,7 @@ if not weekly_sheet or not quarterly_sheet:
     raise Exception("❌ Weekly / Quarterly sheet missing")
 
 # -------------------------------------------------
-# Read date ranges (first non-empty cell)
+# Read date ranges
 # -------------------------------------------------
 def read_title(sheet):
     df = pd.read_excel(EXCEL_FILE, sheet_name=sheet, header=None)
@@ -92,11 +93,8 @@ def read_title(sheet):
 WEEKLY_RANGE = read_title(weekly_sheet)
 QUARTERLY_RANGE = read_title(quarterly_sheet)
 
-print(f"📅 Weekly Range    : {WEEKLY_RANGE}")
-print(f"📅 Quarterly Range : {QUARTERLY_RANGE}")
-
 # -------------------------------------------------
-# Read actual data (skip title row)
+# Read actual data
 # -------------------------------------------------
 weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, skiprows=1)
 quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, skiprows=1)
@@ -108,7 +106,7 @@ weekly_table = weekly_df.to_html(index=False, classes="uptime-table", escape=Fal
 quarterly_table = quarterly_df.to_html(index=False, classes="uptime-table", escape=False)
 
 # -------------------------------------------------
-# MAJOR INCIDENT LOGIC (robust)
+# Major Incident Logic
 # -------------------------------------------------
 outage_col = find_column(weekly_df, ["outage"])
 rca_col = find_column(weekly_df, ["rca"])
