@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        PYTHONUNBUFFERED = '1'
-    }
-
     parameters {
         file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel File')
     }
@@ -31,7 +27,8 @@ pipeline {
         stage('Generate Report') {
             steps {
                 sh '''
-                  export UPTIME_EXCEL=${WORKSPACE}/${UPTIME_EXCEL}
+                  echo "Uploaded file: ${params.UPTIME_EXCEL}"
+                  export UPTIME_EXCEL=${WORKSPACE}/${params.UPTIME_EXCEL}
                   ./venv/bin/python generate_report.py
                 '''
             }
