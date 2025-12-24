@@ -41,9 +41,6 @@ pipeline {
                 script {
                     echo "🔍 Checking for uploaded file..."
                     
-                    // Debug: Show all parameters
-                    echo "All parameters: ${params}"
-                    
                     def excelPath = ""
                     
                     if (params.UPLOADED_EXCEL) {
@@ -53,7 +50,8 @@ pipeline {
                     } else {
                         echo "⚠️⚠️⚠️ NO FILE UPLOADED ⚠️⚠️⚠️"
                         echo "Using default file from repository"
-                        excelPath = "${WORKSPACE}/uptime_latest1.xlsx"
+                        // ✅ CORRECTED FILE NAME - use uptime_latest.xlsx instead of uptime_latest1.xlsx
+                        excelPath = "${WORKSPACE}/uptime_latest.xlsx"
                     }
                     
                     echo "📊 Final file path: ${excelPath}"
