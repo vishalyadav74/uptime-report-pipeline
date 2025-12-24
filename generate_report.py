@@ -1,6 +1,7 @@
 import pandas as pd
 from jinja2 import Template
 import os
+import sys
 
 # -----------------------------
 # PATH CONFIG
@@ -8,13 +9,24 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
-# ✅ OPTION-1: ALWAYS READ NORMALIZED FILE
-EXCEL_FILE = os.getenv("UPTIME_EXCEL", os.path.join(BASE_DIR, "input", "uptime.xlsx"))
+# ✅ FIRST CHECK COMMAND LINE ARGUMENT
+if len(sys.argv) > 1:
+    EXCEL_FILE = sys.argv[1]
+    print(f"📄 Using Excel file from command line: {EXCEL_FILE}")
+# ✅ THEN CHECK ENVIRONMENT VARIABLE
+elif "UPTIME_EXCEL" in os.environ:
+    EXCEL_FILE = os.environ["UPTIME_EXCEL"]
+    print(f"📄 Using Excel file from environment variable: {EXCEL_FILE}")
+# ✅ FINALLY USE DEFAULT
+else:
+    EXCEL_FILE = os.path.join(BASE_DIR, "uptime_latest1.xlsx")
+    print(f"📄 Using default Excel file: {EXCEL_FILE}")
 
+# ✅ CHECK IF FILE EXISTS
 if not os.path.exists(EXCEL_FILE):
     raise Exception(f"❌ Excel file not found at path: {EXCEL_FILE}")
 
-print(f"📄 Using Excel file: {EXCEL_FILE}")
+print(f"✅ Excel file found: {EXCEL_FILE}")
 
 # -----------------------------
 # CONFIG
@@ -60,14 +72,20 @@ def to_minutes(val):
 # -----------------------------
 # Load Excel & Detect Sheets
 # -----------------------------
-xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
-sheet_map = {s.strip().lower(): s for s in xls.sheet_names}
+try:
+    xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
+    sheet_map = {s.strip().lower(): s for s in xls.sheet_names}
+    
+    weekly_sheet = sheet_map.get("weekly")
+    quarterly_sheet = sheet_map.get("quarterly")
 
-weekly_sheet = sheet_map.get("weekly")
-quarterly_sheet = sheet_map.get("quarterly")
-
-if not weekly_sheet or not quarterly_sheet:
-    raise Exception("❌ Weekly or Quarterly sheet not found in Excel")
+    if not weekly_sheet:
+        raise Exception("❌ Weekly sheet not found in Excel")
+    if not quarterly_sheet:
+        raise Exception("❌ Quarterly sheet not found in Excel")
+        
+except Exception as e:
+    raise Exception(f"❌ Error reading Excel file: {str(e)}")
 
 # -----------------------------
 # Read Data
@@ -118,23 +136,28 @@ if "Outage Downtime" in weekly_df.columns:
 # -----------------------------
 # Render HTML
 # -----------------------------
-with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
-    template = Template(f.read())
+try:
+    template_path = os.path.join(BASE_DIR, "uptime_template.html")
+    with open(template_path, encoding="utf-8") as f:
+        template = Template(f.read())
 
-html = template.render(
-    weekly_table=weekly_table,
-    quarterly_table=quarterly_table,
-    weekly_range=WEEKLY_RANGE,
-    quarterly_range=QUARTERLY_RANGE,
-    major_incident=major_incident,
-    major_story=major_story
-)
+    html = template.render(
+        weekly_table=weekly_table,
+        quarterly_table=quarterly_table,
+        weekly_range=WEEKLY_RANGE,
+        quarterly_range=QUARTERLY_RANGE,
+        major_incident=major_incident,
+        major_story=major_story
+    )
+    
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(html)
 
-output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
-with open(output_file, "w", encoding="utf-8") as f:
-    f.write(html)
-
-print("🔥 EXECUTIVE UPTIME REPORT GENERATED SUCCESSFULLY")
-print(f"📤 Output file: {output_file}")
+    print("✅ EXECUTIVE UPTIME REPORT GENERATED SUCCESSFULLY")
+    print(f"📤 Output file: {output_file}")
+    
+except Exception as e:
+    raise Exception(f"❌ Error generating report: {str(e)}")
