@@ -2,13 +2,12 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'UPLOADED_EXCEL', description: 'Upload Excel file for uptime report')
+        file(name: 'EXCEL_FILE', description: 'Upload Excel file for uptime report')
     }
 
     environment {
         PYTHONUNBUFFERED = '1'
         EMAIL_TO = 'yv741518@gmail.com'
-        UPTIME_EXCEL = ''  // Initialize empty
     }
 
     stages {
@@ -37,44 +36,26 @@ pipeline {
             }
         }
 
-        stage('Prepare Excel File') {
-            steps {
-                script {
-                    // Check if file was uploaded via parameter
-                    if (params.UPLOADED_EXCEL) {
-                        echo "📥 File uploaded via parameter detected!"
-                        
-                        // Get the uploaded file path
-                        def uploadedFile = params.UPLOADED_EXCEL
-                        
-                        // Create input directory if it doesn't exist
-                        sh 'mkdir -p input'
-                        
-                        // Copy uploaded file to workspace with proper name
-                        sh """
-                          cp "${uploadedFile}" input/uploaded_uptime.xlsx
-                        """
-                        
-                        // Set environment variable for Python script
-                        env.UPTIME_EXCEL = "${WORKSPACE}/input/uploaded_uptime.xlsx"
-                        echo "✅ Using UPLOADED file: ${UPTIME_EXCEL}"
-                        
-                    } else {
-                        // Use the default file from repository
-                        env.UPTIME_EXCEL = "${WORKSPACE}/uptime_latest1.xlsx"
-                        echo "📄 Using DEFAULT file from repository: ${UPTIME_EXCEL}"
-                    }
-                }
-            }
-        }
-
         stage('Generate Uptime Report') {
             steps {
-                sh '''
-                  echo "📊 Generating report..."
-                  echo "Excel file path: ${UPTIME_EXCEL}"
-                  ./venv/bin/python generate_report.py
-                '''
+                script {
+                    def excelPath = ""
+                    
+                    // Check if file was uploaded
+                    if (params.EXCEL_FILE) {
+                        excelPath = params.EXCEL_FILE
+                        echo "📥 Using uploaded file: ${excelPath}"
+                    } else {
+                        excelPath = "${WORKSPACE}/uptime_latest1.xlsx"
+                        echo "📄 Using default file from repository: ${excelPath}"
+                    }
+                    
+                    // Run Python with file path as argument
+                    sh """
+                        echo "📊 Generating report..."
+                        ./venv/bin/python generate_report.py "${excelPath}"
+                    """
+                }
             }
         }
 
