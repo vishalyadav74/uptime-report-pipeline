@@ -1,13 +1,16 @@
 pipeline {
     agent any
 
+    parameters {
+        file(name: 'EXCEL_FILE', description: 'Select Excel file for uptime report')
+    }
+
     environment {
         PYTHONUNBUFFERED = '1'
         EMAIL_TO = 'yv741518@gmail.com'
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
@@ -33,28 +36,33 @@ pipeline {
             }
         }
 
-        stage('Detect Latest Excel File') {
+        stage('Prepare Excel File') {
             steps {
-                sh '''
-                  echo "🔍 Searching latest Excel file..."
-                  LATEST_EXCEL=$(ls -t data/*.xlsx | head -n 1)
-
-                  if [ -z "$LATEST_EXCEL" ]; then
-                    echo "❌ No Excel file found in data folder"
-                    exit 1
-                  fi
-
-                  echo "✅ Using Excel file: $LATEST_EXCEL"
-                  echo "EXCEL_FILE=$LATEST_EXCEL" >> $GITHUB_ENV
-                '''
+                script {
+                    // If a file parameter was provided, copy it to workspace
+                    if (params.EXCEL_FILE) {
+                        echo "📥 Using uploaded file: ${params.EXCEL_FILE}"
+                        sh '''
+                          mkdir -p input
+                          cp "$EXCEL_FILE" input/uptime.xlsx
+                        '''
+                        env.UPTIME_EXCEL = "${WORKSPACE}/input/uptime.xlsx"
+                    } else {
+                        // Fallback to the file in repository
+                        echo "📄 Using default file from repository"
+                        env.UPTIME_EXCEL = "${WORKSPACE}/uptime_latest1.xlsx"
+                    }
+                    
+                    echo "✅ Excel file set to: ${UPTIME_EXCEL}"
+                }
             }
         }
 
         stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  echo "📊 Generating report from $EXCEL_FILE"
-                  ./venv/bin/python generate_report.py "$EXCEL_FILE"
+                  echo "📊 Generating report from $UPTIME_EXCEL"
+                  ./venv/bin/python generate_report.py
                 '''
             }
         }
