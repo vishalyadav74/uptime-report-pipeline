@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'EXCEL_FILE', description: 'Upload Excel file for uptime report')
+        file(name: 'UPLOADED_EXCEL', description: 'Upload Excel file for uptime report')
     }
 
     environment {
@@ -36,26 +36,35 @@ pipeline {
             }
         }
 
-        stage('Generate Uptime Report') {
+        stage('Prepare Excel File') {
             steps {
                 script {
-                    def excelPath = ""
-                    
-                    // Check if file was uploaded
-                    if (params.EXCEL_FILE) {
-                        excelPath = params.EXCEL_FILE
-                        echo "📥 Using uploaded file: ${excelPath}"
+                    if (params.UPLOADED_EXCEL) {
+                        // File uploaded - use uploaded file
+                        def uploadedFile = params.UPLOADED_EXCEL
+                        echo "✅ File uploaded: ${uploadedFile}"
+                        
+                        // Set environment variable for Python script
+                        env.UPTIME_EXCEL = uploadedFile
                     } else {
-                        excelPath = "${WORKSPACE}/uptime_latest1.xlsx"
-                        echo "📄 Using default file from repository: ${excelPath}"
+                        // No file uploaded - use default file
+                        def defaultFile = "${WORKSPACE}/uptime_latest1.xlsx"
+                        echo "📄 Using default file: ${defaultFile}"
+                        
+                        // Set environment variable for Python script
+                        env.UPTIME_EXCEL = defaultFile
                     }
-                    
-                    // Run Python with file path as argument
-                    sh """
-                        echo "📊 Generating report..."
-                        ./venv/bin/python generate_report.py "${excelPath}"
-                    """
                 }
+            }
+        }
+
+        stage('Generate Uptime Report') {
+            steps {
+                sh '''
+                  echo "📊 Generating report..."
+                  echo "Excel file path: ${UPTIME_EXCEL}"
+                  ./venv/bin/python generate_report.py
+                '''
             }
         }
 
