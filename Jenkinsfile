@@ -8,7 +8,7 @@ pipeline {
     environment {
         PYTHONUNBUFFERED = '1'
         EMAIL_TO = 'yv741518@gmail.com'
-        UPTIME_EXCEL = ''
+        UPTIME_EXCEL = ''  // Initialize empty
     }
 
     stages {
@@ -52,10 +52,11 @@ pipeline {
                         
                         // Copy uploaded file to workspace with proper name
                         sh """
-                          cp "${uploadedFile}" input/uptime.xlsx
+                          cp "${uploadedFile}" input/uploaded_uptime.xlsx
                         """
                         
-                        env.UPTIME_EXCEL = "${WORKSPACE}/input/uptime.xlsx"
+                        // Set environment variable for Python script
+                        env.UPTIME_EXCEL = "${WORKSPACE}/input/uploaded_uptime.xlsx"
                         echo "✅ Using UPLOADED file: ${UPTIME_EXCEL}"
                         
                     } else {
@@ -70,7 +71,8 @@ pipeline {
         stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  echo "📊 Generating report from $UPTIME_EXCEL"
+                  echo "📊 Generating report..."
+                  echo "Excel file path: ${UPTIME_EXCEL}"
                   ./venv/bin/python generate_report.py
                 '''
             }
