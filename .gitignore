@@ -1,14 +1,9 @@
-# Python
+# Generated output
+output/
+
+# Python cache
 __pycache__/
 *.pyc
 
-# Generated output
-output/
+# Temporary / local files
 logo.txt
-
-# Virtual environment
-venv/
-
-# OS files
-.DS_Store
-Thumbs.db
