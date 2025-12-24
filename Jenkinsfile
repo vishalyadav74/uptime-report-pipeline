@@ -33,10 +33,28 @@ pipeline {
             }
         }
 
+        stage('Detect Latest Excel File') {
+            steps {
+                sh '''
+                  echo "🔍 Searching latest Excel file..."
+                  LATEST_EXCEL=$(ls -t data/*.xlsx | head -n 1)
+
+                  if [ -z "$LATEST_EXCEL" ]; then
+                    echo "❌ No Excel file found in data folder"
+                    exit 1
+                  fi
+
+                  echo "✅ Using Excel file: $LATEST_EXCEL"
+                  echo "EXCEL_FILE=$LATEST_EXCEL" >> $GITHUB_ENV
+                '''
+            }
+        }
+
         stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  ./venv/bin/python generate_report.py
+                  echo "📊 Generating report from $EXCEL_FILE"
+                  ./venv/bin/python generate_report.py "$EXCEL_FILE"
                 '''
             }
         }
@@ -67,7 +85,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Report generated and email sent to yv741518@gmail.com'
+            echo '✅ Report generated and email sent successfully'
         }
         failure {
             echo '❌ Pipeline failed'
