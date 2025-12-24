@@ -2,7 +2,10 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel File')
+        file(
+            name: 'UPTIME_EXCEL',
+            description: 'Upload Uptime Excel File (Weekly + Quarterly sheets)'
+        )
     }
 
     stages {
@@ -14,7 +17,7 @@ pipeline {
             }
         }
 
-        stage('Setup Python') {
+        stage('Setup Python Environment') {
             steps {
                 sh '''
                   python3 -m venv venv
@@ -24,13 +27,18 @@ pipeline {
             }
         }
 
-        stage('Generate Report') {
+        stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  echo "Uploaded Excel file path: $UPTIME_EXCEL"
-                  ls -l "$UPTIME_EXCEL"
+                  echo "Workspace: $WORKSPACE"
+                  echo "Uploaded Excel file name: $UPTIME_EXCEL"
 
-                  export UPTIME_EXCEL="$UPTIME_EXCEL"
+                  FILE_PATH="$WORKSPACE/$UPTIME_EXCEL"
+
+                  echo "Resolved Excel file path: $FILE_PATH"
+                  ls -l "$FILE_PATH"
+
+                  export UPTIME_EXCEL="$FILE_PATH"
                   ./venv/bin/python generate_report.py
                 '''
             }
