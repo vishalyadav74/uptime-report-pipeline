@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    parameters {
-        file(
-            name: 'UPTIME_EXCEL',
-            description: 'Upload Uptime Excel File (Weekly + Quarterly sheets)'
-        )
-    }
-
     stages {
 
         stage('Checkout Code') {
@@ -27,19 +20,31 @@ pipeline {
             }
         }
 
+        stage('Detect Latest Excel File') {
+            steps {
+                sh '''
+                  echo "🔍 Detecting latest Excel file from repo..."
+
+                  LATEST_EXCEL=$(ls -t data/*.xlsx | head -n 1)
+
+                  if [ -z "$LATEST_EXCEL" ]; then
+                    echo "❌ No Excel file found in data/ folder"
+                    exit 1
+                  fi
+
+                  echo "✅ Latest Excel file: $LATEST_EXCEL"
+                  echo "LATEST_EXCEL=$LATEST_EXCEL" > excel.env
+                '''
+            }
+        }
+
         stage('Generate Uptime Report') {
             steps {
                 sh '''
-                  echo "Workspace: $WORKSPACE"
-                  echo "Uploaded Excel file name: $UPTIME_EXCEL"
+                  source excel.env
+                  echo "📄 Using Excel file: $LATEST_EXCEL"
 
-                  FILE_PATH="$WORKSPACE/$UPTIME_EXCEL"
-
-                  echo "Resolved Excel file path: $FILE_PATH"
-                  ls -l "$FILE_PATH"
-
-                  export UPTIME_EXCEL="$FILE_PATH"
-                  ./venv/bin/python generate_report.py
+                  ./venv/bin/python generate_report.py "$LATEST_EXCEL"
                 '''
             }
         }
