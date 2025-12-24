@@ -1,4 +1,14 @@
-output/
-logo.txt
+# Python
 __pycache__/
 *.pyc
+venv/
+
+# Runtime folders
+input/
+output/
+
+# Local assets
+logo.txt
+
+# OS
+.DS_Store
