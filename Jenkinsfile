@@ -36,58 +36,50 @@ pipeline {
             }
         }
 
-        stage('Prepare Excel File') {
-    steps {
-        script {
-            if (params.UPLOADED_EXCEL) {
-                echo "✅ File uploaded: ${params.UPLOADED_EXCEL}"
-                
-                // Copy uploaded file to workspace
-                sh """
-                    cp "${params.UPLOADED_EXCEL}" uploaded_file.xlsx
-                """
-                
-                env.UPTIME_EXCEL = "${WORKSPACE}/uploaded_file.xlsx"
-            } else {
-                env.UPTIME_EXCEL = "${WORKSPACE}/uptime_latest1.xlsx"
+        stage('Generate Uptime Report') {
+            steps {
+                script {
+                    echo "🔍 Checking for uploaded file..."
+                    
+                    // Debug: Show all parameters
+                    echo "All parameters: ${params}"
+                    
+                    def excelPath = ""
+                    
+                    if (params.UPLOADED_EXCEL) {
+                        echo "✅✅✅ FILE UPLOADED DETECTED! ✅✅✅"
+                        echo "Uploaded file: ${params.UPLOADED_EXCEL}"
+                        excelPath = params.UPLOADED_EXCEL
+                    } else {
+                        echo "⚠️⚠️⚠️ NO FILE UPLOADED ⚠️⚠️⚠️"
+                        echo "Using default file from repository"
+                        excelPath = "${WORKSPACE}/uptime_latest1.xlsx"
+                    }
+                    
+                    echo "📊 Final file path: ${excelPath}"
+                    
+                    // Run Python with file path
+                    sh """
+                        ./venv/bin/python generate_report.py "${excelPath}"
+                    """
+                }
             }
         }
-    }
-}
-
-        stage('Generate Uptime Report') {
-    steps {
-        script {
-            def excelPath = params.UPLOADED_EXCEL ?: "${WORKSPACE}/uptime_latest1.xlsx"
-            
-            sh """
-                echo "📊 Generating report from: ${excelPath}"
-                ./venv/bin/python generate_report.py "${excelPath}"
-            """
-        }
-    }
-}
 
         stage('Send HTML Email') {
             steps {
                 script {
-                    def outputPath = "${WORKSPACE}/output/uptime_report.html"
+                    def htmlReport = readFile 'output/uptime_report.html'
                     
-                    if (fileExists(outputPath)) {
-                        def htmlReport = readFile outputPath
-                        
-                        emailext(
-                            subject: "SaaS Application Uptime Report – Weekly & Quarterly",
-                            body: htmlReport,
-                            mimeType: 'text/html',
-                            to: env.EMAIL_TO,
-                            from: 'Jenkins <yv741518@gmail.com>',
-                            replyTo: 'yv741518@gmail.com'
-                        )
-                        echo "✅ Email sent successfully"
-                    } else {
-                        error "❌ Report file not found at: ${outputPath}"
-                    }
+                    emailext(
+                        subject: "SaaS Application Uptime Report – Weekly & Quarterly",
+                        body: htmlReport,
+                        mimeType: 'text/html',
+                        to: env.EMAIL_TO,
+                        from: 'Jenkins <yv741518@gmail.com>',
+                        replyTo: 'yv741518@gmail.com'
+                    )
+                    echo "✅ Email sent successfully"
                 }
             }
         }
