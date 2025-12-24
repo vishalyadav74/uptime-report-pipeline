@@ -1,9 +1,11 @@
-# Generated output
-output/
-
-# Python cache
+# Python
 __pycache__/
 *.pyc
+venv/
 
-# Temporary / local files
+# Jenkins / Runtime
+output/
 logo.txt
+
+# OS
+.DS_Store
