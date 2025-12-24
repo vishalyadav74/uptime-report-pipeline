@@ -1,57 +1,40 @@
 pipeline {
     agent any
 
-    environment {
-        PYTHONUNBUFFERED = '1'
-        EMAIL_TO = 'yv741518@gmail.com'
+    parameters {
+        file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel file')
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/vishalyadav74/uptime-report-pipeline.git'
             }
         }
 
-        stage('Setup Virtual Environment') {
+        stage('Setup Python') {
             steps {
                 sh '''
                   python3 -m venv venv
-                '''
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
+                  ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Generate Uptime Report') {
+        stage('Generate Report') {
             steps {
                 sh '''
-                  echo "Using Excel file: $UPTIME_EXCEL"
                   ./venv/bin/python generate_report.py
                 '''
             }
         }
 
-        stage('Send HTML Email') {
+        stage('Archive Report') {
             steps {
-                script {
-                    def htmlReport = readFile 'output/uptime_report.html'
-
-                    emailext(
-                        subject: "SaaS Application Uptime Report",
-                        body: htmlReport,
-                        mimeType: 'text/html',
-                        to: env.EMAIL_TO
-                    )
-                }
+                archiveArtifacts artifacts: 'output/uptime_report.html'
             }
         }
     }
