@@ -3,6 +3,7 @@ from jinja2 import Template
 import os
 import sys
 import glob
+import time  # ✅ ADD THIS LINE
 
 # -----------------------------
 # SMART EXCEL FILE DETECTOR
