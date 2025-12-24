@@ -2,17 +2,24 @@ import pandas as pd
 from jinja2 import Template
 import os
 
+# -----------------------------
+# PATH CONFIG
+# -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-EXCEL_FILE = os.path.join(BASE_DIR, "uptime_latest1.xlsx")
+
+# ✅ OPTION-1: ALWAYS READ NORMALIZED FILE
+EXCEL_FILE = os.getenv("UPTIME_EXCEL", os.path.join(BASE_DIR, "input", "uptime.xlsx"))
+
+if not os.path.exists(EXCEL_FILE):
+    raise Exception(f"❌ Excel file not found at path: {EXCEL_FILE}")
+
+print(f"📄 Using Excel file: {EXCEL_FILE}")
 
 # -----------------------------
-# CONFIG: DATE RANGES
+# CONFIG
 # -----------------------------
-WEEKLY_RANGE = "09th Dec – 15th Dec ’25"
-QUARTERLY_RANGE = "16th Sept – 15th Dec ’25"
 SLA_THRESHOLD = 99.9
-
 
 # -----------------------------
 # Helper: Clean + Format Data
@@ -21,12 +28,13 @@ def clean_df(df):
     df = df.fillna("")
 
     for col in df.columns:
-        if "uptime" in col.lower():
+        col_str = str(col).lower()
+        if "uptime" in col_str:
             try:
                 df[col] = df[col].astype(float).apply(
-                    lambda x: f'<span class="{"good" if x*100 >= SLA_THRESHOLD else "bad"}">{x*100:.2f}%</span>'
+                    lambda x: f'<span class="{"good" if x * 100 >= SLA_THRESHOLD else "bad"}">{x * 100:.2f}%</span>'
                 )
-            except:
+            except Exception:
                 pass
     return df
 
@@ -38,15 +46,14 @@ def to_minutes(val):
     try:
         if isinstance(val, str):
             v = val.lower()
-            hrs = 0
-            mins = 0
+            hrs = mins = 0
             if "hr" in v:
                 hrs = int(v.split("hr")[0].strip())
             if "min" in v:
                 mins = int(v.split("min")[0].split()[-1])
             return hrs * 60 + mins
         return int(val)
-    except:
+    except Exception:
         return 0
 
 
@@ -60,10 +67,13 @@ weekly_sheet = sheet_map.get("weekly")
 quarterly_sheet = sheet_map.get("quarterly")
 
 if not weekly_sheet or not quarterly_sheet:
-    raise Exception("Weekly or Quarterly sheet not found")
+    raise Exception("❌ Weekly or Quarterly sheet not found in Excel")
 
-weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, engine="openpyxl")
-quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, engine="openpyxl")
+# -----------------------------
+# Read Data
+# -----------------------------
+weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet)
+quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet)
 
 weekly_df = clean_df(weekly_df)
 quarterly_df = clean_df(quarterly_df)
@@ -72,54 +82,43 @@ weekly_table = weekly_df.to_html(index=False, classes="uptime-table", escape=Fal
 quarterly_table = quarterly_df.to_html(index=False, classes="uptime-table", escape=False)
 
 # -----------------------------
-# MAJOR INCIDENT OF THE WEEK
-# (ONLY OUTAGE DOWNTIME + RCA TEXT)
+# DATE RANGE (OPTIONAL – STATIC FOR NOW)
 # -----------------------------
-weekly_df["_outage_mins"] = weekly_df["Outage Downtime"].apply(to_minutes)
-outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
+WEEKLY_RANGE = "Weekly Uptime Summary"
+QUARTERLY_RANGE = "Quarterly Uptime Summary"
 
-if outage_df.empty:
-    major_incident = {
-        "account": "N/A",
-        "outage": "0 mins",
-        "rca": ""
-    }
+# -----------------------------
+# MAJOR INCIDENT (OUTAGE ONLY)
+# -----------------------------
+major_incident = {"account": "N/A", "outage": "0 mins", "rca": ""}
+major_story = "No unplanned outages observed during this period."
 
-    major_story = (
-        f"No unplanned outages were observed during the week "
-        f"({WEEKLY_RANGE}). All applications remained stable."
-    )
-else:
-    major_row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
+if "Outage Downtime" in weekly_df.columns:
+    weekly_df["_outage_mins"] = weekly_df["Outage Downtime"].apply(to_minutes)
+    outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
 
-    account = major_row.get("Account Name", "N/A")
-    outage_mins = major_row.get("_outage_mins", 0)
-    rca_text = major_row.get("RCA of Outage", "").strip()
+    if not outage_df.empty:
+        row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
+        account = row.get("Account Name", "N/A")
+        outage_mins = row["_outage_mins"]
+        rca = str(row.get("RCA of Outage", "")).strip()
 
-    major_incident = {
-        "account": account,
-        "outage": f"{outage_mins} mins",
-        "rca": rca_text
-    }
+        major_incident = {
+            "account": account,
+            "outage": f"{outage_mins} mins",
+            "rca": rca
+        }
 
-    # 🔥 RCA-DRIVEN STORY (NO ASSUMPTION)
-    if rca_text:
         major_story = (
             f"<b>{account}</b> experienced the highest unplanned outage of "
-            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}).<br>"
-            f"<b>Root Cause:</b> {rca_text}"
-        )
-    else:
-        major_story = (
-            f"<b>{account}</b> experienced the highest unplanned outage of "
-            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}). "
-            f"Complete RCA yet to be shared by the concerned team."
+            f"<b>{outage_mins} mins</b>.<br>"
+            f"<b>Root Cause:</b> {rca if rca else 'RCA yet to be shared.'}"
         )
 
 # -----------------------------
 # Render HTML
 # -----------------------------
-with open(os.path.join(BASE_DIR, "uptime_template.html")) as f:
+with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
     template = Template(f.read())
 
 html = template.render(
@@ -133,7 +132,9 @@ html = template.render(
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
+output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
+with open(output_file, "w", encoding="utf-8") as f:
     f.write(html)
 
-print("🔥 EXECUTIVE UPTIME REPORT (OUTAGE-ONLY, RCA-DRIVEN STORY) GENERATED")
+print("🔥 EXECUTIVE UPTIME REPORT GENERATED SUCCESSFULLY")
+print(f"📤 Output file: {output_file}")
