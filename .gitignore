@@ -3,9 +3,12 @@ __pycache__/
 *.pyc
 venv/
 
-# Jenkins / Runtime
+# Jenkins / Runtime Output
 output/
 logo.txt
+
+# Uploaded Excel files (always via Jenkins parameter)
+*.xlsx
 
 # OS
 .DS_Store
