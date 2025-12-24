@@ -2,12 +2,13 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'EXCEL_FILE', description: 'Select Excel file for uptime report')
+        file(name: 'UPLOADED_EXCEL', description: 'Upload Excel file for uptime report')
     }
 
     environment {
         PYTHONUNBUFFERED = '1'
         EMAIL_TO = 'yv741518@gmail.com'
+        UPTIME_EXCEL = ''
     }
 
     stages {
@@ -39,21 +40,29 @@ pipeline {
         stage('Prepare Excel File') {
             steps {
                 script {
-                    // If a file parameter was provided, copy it to workspace
-                    if (params.EXCEL_FILE) {
-                        echo "📥 Using uploaded file: ${params.EXCEL_FILE}"
-                        sh '''
-                          mkdir -p input
-                          cp "$EXCEL_FILE" input/uptime.xlsx
-                        '''
+                    // Check if file was uploaded via parameter
+                    if (params.UPLOADED_EXCEL) {
+                        echo "📥 File uploaded via parameter detected!"
+                        
+                        // Get the uploaded file path
+                        def uploadedFile = params.UPLOADED_EXCEL
+                        
+                        // Create input directory if it doesn't exist
+                        sh 'mkdir -p input'
+                        
+                        // Copy uploaded file to workspace with proper name
+                        sh """
+                          cp "${uploadedFile}" input/uptime.xlsx
+                        """
+                        
                         env.UPTIME_EXCEL = "${WORKSPACE}/input/uptime.xlsx"
+                        echo "✅ Using UPLOADED file: ${UPTIME_EXCEL}"
+                        
                     } else {
-                        // Fallback to the file in repository
-                        echo "📄 Using default file from repository"
+                        // Use the default file from repository
                         env.UPTIME_EXCEL = "${WORKSPACE}/uptime_latest1.xlsx"
+                        echo "📄 Using DEFAULT file from repository: ${UPTIME_EXCEL}"
                     }
-                    
-                    echo "✅ Excel file set to: ${UPTIME_EXCEL}"
                 }
             }
         }
@@ -70,16 +79,23 @@ pipeline {
         stage('Send HTML Email') {
             steps {
                 script {
-                    def htmlReport = readFile 'output/uptime_report.html'
-
-                    emailext(
-                        subject: "SaaS Application Uptime Report – Weekly & Quarterly",
-                        body: htmlReport,
-                        mimeType: 'text/html',
-                        to: env.EMAIL_TO,
-                        from: 'Jenkins <yv741518@gmail.com>',
-                        replyTo: 'yv741518@gmail.com'
-                    )
+                    def outputPath = "${WORKSPACE}/output/uptime_report.html"
+                    
+                    if (fileExists(outputPath)) {
+                        def htmlReport = readFile outputPath
+                        
+                        emailext(
+                            subject: "SaaS Application Uptime Report – Weekly & Quarterly",
+                            body: htmlReport,
+                            mimeType: 'text/html',
+                            to: env.EMAIL_TO,
+                            from: 'Jenkins <yv741518@gmail.com>',
+                            replyTo: 'yv741518@gmail.com'
+                        )
+                        echo "✅ Email sent successfully"
+                    } else {
+                        error "❌ Report file not found at: ${outputPath}"
+                    }
                 }
             }
         }
@@ -93,7 +109,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Report generated and email sent successfully'
+            echo '✅ Pipeline completed successfully'
         }
         failure {
             echo '❌ Pipeline failed'
