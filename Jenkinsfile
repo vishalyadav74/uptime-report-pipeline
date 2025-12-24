@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'UPLOADED_EXCEL', description: 'Upload Excel file for uptime report')
+        file(name: 'UPLOADED_EXCEL', description: 'Optional: Upload different Excel file')
     }
 
     environment {
@@ -18,59 +18,50 @@ pipeline {
             }
         }
 
-        stage('Setup Virtual Environment') {
+        stage('Setup Environment') {
             steps {
                 sh '''
                   python3 --version
                   python3 -m venv venv
-                '''
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                  ./venv/bin/python -m pip install --upgrade pip
+                  ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
+                  
+                  echo "📁 Repository contents:"
+                  ls -la
+                  echo ""
+                  echo "🔍 Excel files found:"
+                  find . -name "*.xlsx" -o -name "*.xls" | head -10
                 '''
             }
         }
 
-        stage('Generate Uptime Report') {
+        stage('Generate Report') {
             steps {
                 script {
-                    echo "🔍 Checking for uploaded file..."
-                    
-                    def excelPath = ""
+                    echo "🚀 Starting automated report generation..."
                     
                     if (params.UPLOADED_EXCEL) {
-                        echo "✅✅✅ FILE UPLOADED DETECTED! ✅✅✅"
-                        echo "Uploaded file: ${params.UPLOADED_EXCEL}"
-                        excelPath = params.UPLOADED_EXCEL
+                        echo "✅ Using uploaded file"
+                        sh """
+                            ./venv/bin/python generate_report.py "${params.UPLOADED_EXCEL}"
+                        """
                     } else {
-                        echo "⚠️⚠️⚠️ NO FILE UPLOADED ⚠️⚠️⚠️"
-                        echo "Using default file from repository"
-                        // ✅ CORRECTED FILE NAME - use uptime_latest.xlsx instead of uptime_latest1.xlsx
-                        excelPath = "${WORKSPACE}/uptime_latest.xlsx"
+                        echo "📊 Auto-detecting Excel file from repository..."
+                        sh """
+                            ./venv/bin/python generate_report.py
+                        """
                     }
-                    
-                    echo "📊 Final file path: ${excelPath}"
-                    
-                    // Run Python with file path
-                    sh """
-                        ./venv/bin/python generate_report.py "${excelPath}"
-                    """
                 }
             }
         }
 
-        stage('Send HTML Email') {
+        stage('Send Email') {
             steps {
                 script {
                     def htmlReport = readFile 'output/uptime_report.html'
                     
                     emailext(
-                        subject: "SaaS Application Uptime Report – Weekly & Quarterly",
+                        subject: "Automated Uptime Report - ${new Date().format('dd-MMM-yyyy')}",
                         body: htmlReport,
                         mimeType: 'text/html',
                         to: env.EMAIL_TO,
@@ -82,7 +73,7 @@ pipeline {
             }
         }
 
-        stage('Archive Report') {
+        stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
             }
