@@ -1,76 +1,58 @@
 import pandas as pd
 from jinja2 import Template
 import os
-import re
-import sys
-
-# -------------------------------------------------
-# Validate Excel file input
-# -------------------------------------------------
-if len(sys.argv) < 2:
-    raise Exception("❌ Excel file path not provided")
-
-EXCEL_FILE = sys.argv[1]
-
-if not os.path.exists(EXCEL_FILE):
-    raise Exception(f"❌ Excel file not found: {EXCEL_FILE}")
-
-print(f"📄 Using Excel file: {EXCEL_FILE}")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+EXCEL_FILE = os.path.join(BASE_DIR, "uptime_latest1.xlsx")
+
+# -----------------------------
+# CONFIG: DATE RANGES
+# -----------------------------
+WEEKLY_RANGE = "09th Dec – 15th Dec ’25"
+QUARTERLY_RANGE = "16th Sept – 15th Dec ’25"
 SLA_THRESHOLD = 99.9
 
-# -------------------------------------------------
-# Helpers
-# -------------------------------------------------
-def extract_date_range(text):
-    if not text:
-        return "N/A"
-    match = re.search(r"\((.*?)\)", str(text))
-    return match.group(1) if match else str(text)
 
-
+# -----------------------------
+# Helper: Clean + Format Data
+# -----------------------------
 def clean_df(df):
     df = df.fillna("")
+
     for col in df.columns:
-        col_str = str(col).lower()
-        if "uptime" in col_str:
+        if "uptime" in col.lower():
             try:
-                df[col] = pd.to_numeric(df[col], errors="coerce").apply(
-                    lambda x: f'<span class="{"good" if x >= SLA_THRESHOLD else "bad"}">{x:.2f}%</span>'
-                    if pd.notna(x) else ""
+                df[col] = df[col].astype(float).apply(
+                    lambda x: f'<span class="{"good" if x*100 >= SLA_THRESHOLD else "bad"}">{x*100:.2f}%</span>'
                 )
             except:
                 pass
     return df
 
 
+# -----------------------------
+# Helper: Convert downtime to minutes
+# -----------------------------
 def to_minutes(val):
     try:
         if isinstance(val, str):
             v = val.lower()
-            hrs = mins = 0
+            hrs = 0
+            mins = 0
             if "hr" in v:
-                hrs = int(re.search(r"(\d+)\s*hr", v).group(1))
+                hrs = int(v.split("hr")[0].strip())
             if "min" in v:
-                mins = int(re.search(r"(\d+)\s*min", v).group(1))
+                mins = int(v.split("min")[0].split()[-1])
             return hrs * 60 + mins
         return int(val)
     except:
         return 0
 
 
-def find_column(df, keywords):
-    for col in df.columns:
-        col_l = str(col).lower()
-        if all(k in col_l for k in keywords):
-            return col
-    return None
-
-# -------------------------------------------------
-# Load sheets
-# -------------------------------------------------
+# -----------------------------
+# Load Excel & Detect Sheets
+# -----------------------------
 xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
 sheet_map = {s.strip().lower(): s for s in xls.sheet_names}
 
@@ -78,26 +60,10 @@ weekly_sheet = sheet_map.get("weekly")
 quarterly_sheet = sheet_map.get("quarterly")
 
 if not weekly_sheet or not quarterly_sheet:
-    raise Exception("❌ Weekly / Quarterly sheet missing")
+    raise Exception("Weekly or Quarterly sheet not found")
 
-# -------------------------------------------------
-# Read date ranges
-# -------------------------------------------------
-def read_title(sheet):
-    df = pd.read_excel(EXCEL_FILE, sheet_name=sheet, header=None)
-    for val in df.iloc[0]:
-        if pd.notna(val):
-            return extract_date_range(val)
-    return "N/A"
-
-WEEKLY_RANGE = read_title(weekly_sheet)
-QUARTERLY_RANGE = read_title(quarterly_sheet)
-
-# -------------------------------------------------
-# Read actual data
-# -------------------------------------------------
-weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, skiprows=1)
-quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, skiprows=1)
+weekly_df = pd.read_excel(EXCEL_FILE, sheet_name=weekly_sheet, engine="openpyxl")
+quarterly_df = pd.read_excel(EXCEL_FILE, sheet_name=quarterly_sheet, engine="openpyxl")
 
 weekly_df = clean_df(weekly_df)
 quarterly_df = clean_df(quarterly_df)
@@ -105,39 +71,55 @@ quarterly_df = clean_df(quarterly_df)
 weekly_table = weekly_df.to_html(index=False, classes="uptime-table", escape=False)
 quarterly_table = quarterly_df.to_html(index=False, classes="uptime-table", escape=False)
 
-# -------------------------------------------------
-# Major Incident Logic
-# -------------------------------------------------
-outage_col = find_column(weekly_df, ["outage"])
-rca_col = find_column(weekly_df, ["rca"])
-account_col = find_column(weekly_df, ["account"])
-
-if outage_col:
-    weekly_df["_outage_mins"] = weekly_df[outage_col].apply(to_minutes)
-    outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
-else:
-    outage_df = pd.DataFrame()
+# -----------------------------
+# MAJOR INCIDENT OF THE WEEK
+# (ONLY OUTAGE DOWNTIME + RCA TEXT)
+# -----------------------------
+weekly_df["_outage_mins"] = weekly_df["Outage Downtime"].apply(to_minutes)
+outage_df = weekly_df[weekly_df["_outage_mins"] > 0]
 
 if outage_df.empty:
-    major_incident = {"account": "N/A", "outage": "0 mins"}
-    major_story = f"No unplanned outages observed during ({WEEKLY_RANGE})."
-else:
-    row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
-    account = row.get(account_col, "N/A")
-    outage = row["_outage_mins"]
-    rca = row.get(rca_col, "").strip() if rca_col else ""
+    major_incident = {
+        "account": "N/A",
+        "outage": "0 mins",
+        "rca": ""
+    }
 
-    major_incident = {"account": account, "outage": f"{outage} mins"}
     major_story = (
-        f"<b>{account}</b> experienced the highest unplanned outage of "
-        f"<b>{outage} mins</b> during ({WEEKLY_RANGE}).<br>"
-        f"<b>Root Cause:</b> {rca if rca else 'RCA yet to be shared.'}"
+        f"No unplanned outages were observed during the week "
+        f"({WEEKLY_RANGE}). All applications remained stable."
     )
+else:
+    major_row = outage_df.loc[outage_df["_outage_mins"].idxmax()]
 
-# -------------------------------------------------
+    account = major_row.get("Account Name", "N/A")
+    outage_mins = major_row.get("_outage_mins", 0)
+    rca_text = major_row.get("RCA of Outage", "").strip()
+
+    major_incident = {
+        "account": account,
+        "outage": f"{outage_mins} mins",
+        "rca": rca_text
+    }
+
+    # 🔥 RCA-DRIVEN STORY (NO ASSUMPTION)
+    if rca_text:
+        major_story = (
+            f"<b>{account}</b> experienced the highest unplanned outage of "
+            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}).<br>"
+            f"<b>Root Cause:</b> {rca_text}"
+        )
+    else:
+        major_story = (
+            f"<b>{account}</b> experienced the highest unplanned outage of "
+            f"<b>{outage_mins} mins</b> during the week ({WEEKLY_RANGE}). "
+            f"Complete RCA yet to be shared by the concerned team."
+        )
+
+# -----------------------------
 # Render HTML
-# -------------------------------------------------
-with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
+# -----------------------------
+with open(os.path.join(BASE_DIR, "uptime_template.html")) as f:
     template = Template(f.read())
 
 html = template.render(
@@ -150,10 +132,8 @@ html = template.render(
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
 
-with open(output_file, "w", encoding="utf-8") as f:
+with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
     f.write(html)
 
-print("🔥 EXECUTIVE UPTIME REPORT GENERATED")
-print(f"📤 Output: {output_file}")
+print("🔥 EXECUTIVE UPTIME REPORT (OUTAGE-ONLY, RCA-DRIVEN STORY) GENERATED")
