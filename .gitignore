@@ -7,8 +7,5 @@ venv/
 output/
 logo.txt
 
-# Uploaded Excel files (always via Jenkins parameter)
-*.xlsx
-
 # OS
 .DS_Store
