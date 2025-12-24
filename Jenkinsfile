@@ -18,7 +18,6 @@ pipeline {
         stage('Setup Virtual Environment') {
             steps {
                 sh '''
-                  python3 --version
                   python3 -m venv venv
                 '''
             }
@@ -27,7 +26,6 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                  ./venv/bin/python -m pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
                 '''
             }
@@ -36,6 +34,7 @@ pipeline {
         stage('Generate Uptime Report') {
             steps {
                 sh '''
+                  echo "Using Excel file: $UPTIME_EXCEL"
                   ./venv/bin/python generate_report.py
                 '''
             }
@@ -47,30 +46,13 @@ pipeline {
                     def htmlReport = readFile 'output/uptime_report.html'
 
                     emailext(
-                        subject: "SaaS Application Uptime Report – Weekly & Quarterly",
+                        subject: "SaaS Application Uptime Report",
                         body: htmlReport,
                         mimeType: 'text/html',
-                        to: env.EMAIL_TO,
-                        from: 'Jenkins <yv741518@gmail.com>',
-                        replyTo: 'yv741518@gmail.com'
+                        to: env.EMAIL_TO
                     )
                 }
             }
-        }
-
-        stage('Archive Report') {
-            steps {
-                archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
-            }
-        }
-    }
-
-    post {
-        success {
-            echo '✅ Report generated and email sent to yv741518@gmail.com'
-        }
-        failure {
-            echo '❌ Pipeline failed'
         }
     }
 }
