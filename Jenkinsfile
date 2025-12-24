@@ -37,26 +37,23 @@ pipeline {
         }
 
         stage('Prepare Excel File') {
-            steps {
-                script {
-                    if (params.UPLOADED_EXCEL) {
-                        // File uploaded - use uploaded file
-                        def uploadedFile = params.UPLOADED_EXCEL
-                        echo "✅ File uploaded: ${uploadedFile}"
-                        
-                        // Set environment variable for Python script
-                        env.UPTIME_EXCEL = uploadedFile
-                    } else {
-                        // No file uploaded - use default file
-                        def defaultFile = "${WORKSPACE}/uptime_latest1.xlsx"
-                        echo "📄 Using default file: ${defaultFile}"
-                        
-                        // Set environment variable for Python script
-                        env.UPTIME_EXCEL = defaultFile
-                    }
-                }
+    steps {
+        script {
+            if (params.UPLOADED_EXCEL) {
+                echo "✅ File uploaded: ${params.UPLOADED_EXCEL}"
+                
+                // Copy uploaded file to workspace
+                sh """
+                    cp "${params.UPLOADED_EXCEL}" uploaded_file.xlsx
+                """
+                
+                env.UPTIME_EXCEL = "${WORKSPACE}/uploaded_file.xlsx"
+            } else {
+                env.UPTIME_EXCEL = "${WORKSPACE}/uptime_latest1.xlsx"
             }
         }
+    }
+}
 
         stage('Generate Uptime Report') {
     steps {
