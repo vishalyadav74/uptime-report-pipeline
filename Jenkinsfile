@@ -59,14 +59,17 @@ pipeline {
         }
 
         stage('Generate Uptime Report') {
-            steps {
-                sh '''
-                  echo "📊 Generating report..."
-                  echo "Excel file path: ${UPTIME_EXCEL}"
-                  ./venv/bin/python generate_report.py
-                '''
-            }
+    steps {
+        script {
+            def excelPath = params.UPLOADED_EXCEL ?: "${WORKSPACE}/uptime_latest1.xlsx"
+            
+            sh """
+                echo "📊 Generating report from: ${excelPath}"
+                ./venv/bin/python generate_report.py "${excelPath}"
+            """
         }
+    }
+}
 
         stage('Send HTML Email') {
             steps {
