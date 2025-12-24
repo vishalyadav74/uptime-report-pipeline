@@ -1,13 +1,17 @@
 pipeline {
     agent any
 
+    environment {
+        PYTHONUNBUFFERED = '1'
+    }
+
     parameters {
-        file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel file')
+        file(name: 'UPTIME_EXCEL', description: 'Upload Uptime Excel File')
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/vishalyadav74/uptime-report-pipeline.git'
@@ -27,6 +31,7 @@ pipeline {
         stage('Generate Report') {
             steps {
                 sh '''
+                  export UPTIME_EXCEL=${WORKSPACE}/${UPTIME_EXCEL}
                   ./venv/bin/python generate_report.py
                 '''
             }
@@ -34,8 +39,17 @@ pipeline {
 
         stage('Archive Report') {
             steps {
-                archiveArtifacts artifacts: 'output/uptime_report.html'
+                archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Uptime report generated successfully'
+        }
+        failure {
+            echo '❌ Pipeline failed'
         }
     }
 }
