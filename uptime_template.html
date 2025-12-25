@@ -5,11 +5,15 @@
 <title>SaaS Uptime Report</title>
 
 <style>
+/* RESET */
+body, p, div, table { margin:0; padding:0; }
 body{
-  font-family:Segoe UI,Arial,sans-serif;
+  font-family:Segoe UI, Arial, sans-serif;
   background:#f4f6f8;
   padding:20px;
 }
+
+/* CONTAINER */
 .container{
   max-width:1200px;
   background:#ffffff;
@@ -17,6 +21,9 @@ body{
   border-radius:6px;
   box-shadow:0 2px 10px rgba(0,0,0,.08);
 }
+
+/* GLOBAL SPACING */
+.block-gap{ margin-top:20px; }
 
 /* HEADER */
 .header{
@@ -27,29 +34,43 @@ body{
 .header h1{margin:0;}
 .header p{margin-top:6px;font-size:14px;}
 
+/* INTRO */
+.intro{
+  padding:18px 30px;
+  background:#fafafa;
+  border-bottom:1px solid #e5e5e5;
+  font-size:14px;
+  line-height:1.6;
+}
+
+/* MAJOR INCIDENT */
+.cards{ padding:0 30px; }
+.card{
+  background:#fff3f6;
+  border-left:6px solid #e01e7e;
+  padding:15px 18px;
+  border-radius:6px;
+}
+.card h2{
+  margin:0 0 8px;
+  color:#e01e7e;
+  font-size:18px;
+}
+.card p{
+  font-size:13px;
+  margin:6px 0;
+}
+
 /* SECTIONS */
-.section{padding:20px 30px;}
+.section{
+  padding:0 30px;
+}
 .section-title{
   background:#ececec;
   padding:8px 12px;
   font-weight:600;
   margin-bottom:10px;
 }
-
-/* MAJOR INCIDENT */
-.cards{padding:0 30px;}
-.card{
-  background:#fff3f6;
-  border-left:6px solid #e01e7e;
-  padding:15px;
-  border-radius:6px;
-}
-.card h2{
-  margin:0 0 6px;
-  color:#e01e7e;
-  font-size:18px;
-}
-.card p{font-size:13px;margin:6px 0;}
 
 /* TABLE */
 table.uptime-table{
@@ -68,25 +89,21 @@ table.uptime-table td{
   border:1px solid #ddd;
 }
 
-/* ALTERNATE ROW COLORS */
-table.uptime-table tbody tr:nth-child(odd){
-  background:#ffffff;
-}
-table.uptime-table tbody tr:nth-child(even){
-  background:#f5f5f5;
-}
+/* ALTERNATE ROW COLORS (WORKING) */
+table.uptime-table tbody tr:nth-child(odd){ background:#ffffff; }
+table.uptime-table tbody tr:nth-child(even){ background:#f5f5f5; }
 
 /* UPTIME COLORS */
-.uptime-good{color:#0a8a0a;font-weight:600;}
-.uptime-bad{color:#d60000;font-weight:600;}
+.uptime-good{ color:#0a8a0a; font-weight:600; }
+.uptime-bad{ color:#d60000; font-weight:600; }
 
 /* FOOTER */
 .footer{
-  background:#ffffff;
   padding:20px 30px;
   font-size:13px;
   color:#333;
 }
+.footer p{ margin-bottom:10px; }
 </style>
 </head>
 
@@ -100,18 +117,15 @@ table.uptime-table tbody tr:nth-child(even){
 </div>
 
 <!-- INTRO -->
-<div style="padding:18px 30px;background:#fafafa;border-bottom:1px solid #e5e5e5">
+<div class="intro">
   Hi Sir,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all our SaaS accounts
   along with the corresponding remarks and RCA stating the relevant justification
   for any observed downtime.
 </div>
 
-<!-- SPACER -->
-<div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>
-
 <!-- MAJOR INCIDENT -->
-<div class="cards">
+<div class="cards block-gap">
   <div class="card">
     <h2>🚨 Major Incident of the Week</h2>
     <p><b>Account:</b> {{ major_incident.account }}</p>
@@ -123,32 +137,23 @@ table.uptime-table tbody tr:nth-child(even){
   </div>
 </div>
 
-<!-- SPACER -->
-<div style="height:22px;line-height:22px;font-size:0;">&nbsp;</div>
-
 <!-- WEEKLY -->
-<div class="section">
+<div class="section block-gap">
   <div class="section-title">{{ weekly_title }}</div>
   {{ weekly_table | safe }}
 </div>
 
-<!-- SPACER -->
-<div style="height:22px;line-height:22px;font-size:0;">&nbsp;</div>
-
 <!-- QUARTERLY -->
 {% if quarterly_table %}
-<div class="section">
+<div class="section block-gap">
   <div class="section-title">{{ quarterly_title }}</div>
   {{ quarterly_table | safe }}
 </div>
 {% endif %}
 
-<!-- SPACER -->
-<div style="height:24px;line-height:24px;font-size:0;">&nbsp;</div>
-
 <!-- FOOTER -->
-<div class="footer">
-  <p style="margin:0 0 10px 0;">
+<div class="footer block-gap">
+  <p>
     For any production related incident and support, contact
     <a href="mailto:incident@businessnext.com"
        style="color:#e01e7e;text-decoration:none;">
@@ -156,7 +161,7 @@ table.uptime-table tbody tr:nth-child(even){
     </a>
   </p>
 
-  <p style="margin:0 0 10px 0;">
+  <p>
     Best Regards,<br>
     Atin Gambhir | Manager – ITSM (CDG)
   </p>
