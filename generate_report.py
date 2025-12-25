@@ -31,7 +31,7 @@ def get_cell_display(cell):
     if cell.value is None:
         return ""
 
-    # Handle % formatting
+    # Percentage formatting
     if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
         decimals = 0
         match = re.search(r"\.(0+)%", cell.number_format)
@@ -42,7 +42,7 @@ def get_cell_display(cell):
     return str(cell.value)
 
 # -----------------------------
-# Read sheet EXACTLY
+# Read sheet EXACTLY as Excel
 # -----------------------------
 def read_sheet_exact(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -58,7 +58,6 @@ def read_sheet_exact(sheet_name):
         if any(row_data):
             rows.append(row_data)
 
-    # Build HTML table manually
     html = '<table class="uptime-table">\n<thead><tr>'
     for h in headers:
         html += f"<th>{h}</th>"
@@ -75,7 +74,7 @@ def read_sheet_exact(sheet_name):
     return title, headers, rows, html
 
 # -----------------------------
-# Downtime comparison (weekly only)
+# Downtime comparison helper
 # -----------------------------
 def downtime_to_minutes(text):
     if not text:
@@ -109,10 +108,10 @@ if len(sheets) > 1:
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
-if "Total Downtime(In Mins)" in weekly_headers:
+if "Total Downtime(In Mins)" in weekly_headers and "Account Name" in weekly_headers:
     idx_downtime = weekly_headers.index("Total Downtime(In Mins)")
     idx_account = weekly_headers.index("Account Name")
-    idx_rca = weekly_headers.index("RCA of Outage")
+    idx_rca = weekly_headers.index("RCA of Outage") if "RCA of Outage" in weekly_headers else None
 
     max_minutes = -1
     max_row = None
@@ -127,8 +126,9 @@ if "Total Downtime(In Mins)" in weekly_headers:
         major_incident = {
             "account": max_row[idx_account],
             "outage": max_row[idx_downtime],
-            "rca": max_row[idx_rca]
+            "rca": max_row[idx_rca] if idx_rca is not None else ""
         }
+
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
             f"of <b>{major_incident['outage']}</b> during the week."
