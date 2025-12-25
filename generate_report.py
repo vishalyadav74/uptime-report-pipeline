@@ -10,7 +10,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
 # -----------------------------
-# Pick Excel
+# Pick Excel file
 # -----------------------------
 def find_excel():
     files = []
@@ -25,45 +25,57 @@ EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
 # -----------------------------
-# Read sheet EXACTLY as displayed
+# Helper: format cell EXACTLY like Excel
+# -----------------------------
+def get_cell_display(cell):
+    if cell.value is None:
+        return ""
+
+    # Handle % formatting
+    if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
+        decimals = 0
+        match = re.search(r"\.(0+)%", cell.number_format)
+        if match:
+            decimals = len(match.group(1))
+        return f"{cell.value * 100:.{decimals}f}%"
+
+    return str(cell.value)
+
+# -----------------------------
+# Read sheet EXACTLY
 # -----------------------------
 def read_sheet_exact(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet_name]
 
-    # Title (A1)
     title = ws["A1"].value or ""
 
-    # Header row (row 2)
-    headers = [cell.value for cell in ws[2]]
+    headers = [cell.value or "" for cell in ws[2]]
 
-    data = []
-    for row in ws.iter_rows(min_row=3, values_only=False):
-        row_data = []
-        for cell in row:
-            # cell.text = EXACT Excel display value
-            row_data.append(cell.text if cell.text is not None else "")
+    rows = []
+    for row in ws.iter_rows(min_row=3):
+        row_data = [get_cell_display(cell) for cell in row]
         if any(row_data):
-            data.append(row_data)
+            rows.append(row_data)
 
-    # Build HTML manually (no pandas at all)
-    html = '<table class="uptime-table">\n<thead>\n<tr>'
+    # Build HTML table manually
+    html = '<table class="uptime-table">\n<thead><tr>'
     for h in headers:
         html += f"<th>{h}</th>"
-    html += "</tr>\n</thead>\n<tbody>\n"
+    html += "</tr></thead>\n<tbody>\n"
 
-    for row in data:
+    for row in rows:
         html += "<tr>"
         for val in row:
             html += f"<td>{val}</td>"
         html += "</tr>\n"
 
-    html += "</tbody>\n</table>"
+    html += "</tbody></table>"
 
-    return title, headers, data, html
+    return title, headers, rows, html
 
 # -----------------------------
-# Downtime comparison helper (weekly only)
+# Downtime comparison (weekly only)
 # -----------------------------
 def downtime_to_minutes(text):
     if not text:
@@ -92,7 +104,7 @@ if len(sheets) > 1:
     quarterly_range, q_headers, q_rows, quarterly_table = read_sheet_exact(sheets[1])
 
 # -----------------------------
-# Major Incident (Weekly only)
+# Major Incident (Weekly)
 # -----------------------------
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
