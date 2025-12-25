@@ -61,7 +61,7 @@ pipeline {
                     def htmlReport = readFile 'output/uptime_report.html'
                     
                     emailext(
-                        subject: "Automated Uptime Report - ${new Date().format('dd-MMM-yyyy')}",
+                        subject: "SAAS Accounts Weekly and Quarterly Application Uptime Report",
                         body: htmlReport,
                         mimeType: 'text/html',
                         to: env.EMAIL_TO,
