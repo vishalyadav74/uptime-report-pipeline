@@ -67,7 +67,7 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
     # Remove duplicate columns
     df = df.loc[:, ~df.columns.duplicated()]
 
-    # Column normalization
+    # Normalize column names
     COLUMN_MAP = {
         "account name": "Account Name",
         "total uptime": "Total Uptime",
@@ -87,7 +87,7 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
 
     df = df.rename(columns=rename_cols)
 
-    # Required columns
+    # Required columns (NO Outage Minutes anywhere)
     required_cols = [
         "Account Name",
         "Total Uptime",
@@ -104,13 +104,13 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
         if col not in df.columns:
             raise Exception(f"❌ Missing required column in {sheet_name}: {col}")
 
-    # Quarterly: add empty RCA if missing
+    # Quarterly: add empty RCA column if missing
     if is_quarterly and "RCA of Outage" not in df.columns:
         df["RCA of Outage"] = ""
 
     df = df[required_cols + (["RCA of Outage"] if is_quarterly else [])]
 
-    # Total Uptime AS-IS (Excel value)
+    # Total Uptime AS-IS (Excel value only)
     df["Total Uptime"] = df["Total Uptime"].astype(str)
 
     html_table = df.to_html(index=False, classes="uptime-table", escape=False)
@@ -138,6 +138,16 @@ if quarterly_sheet:
     )
 
 # -----------------------------
+# DUMMY MAJOR INCIDENT (TEMPLATE SAFE)
+# -----------------------------
+major_incident = {
+    "account": "",
+    "outage": "",
+    "rca": ""
+}
+major_story = ""
+
+# -----------------------------
 # RENDER HTML
 # -----------------------------
 template_path = os.path.join(BASE_DIR, "uptime_template.html")
@@ -149,6 +159,8 @@ html = template.render(
     quarterly_range=quarterly_range,
     weekly_table=weekly_table,
     quarterly_table=quarterly_table,
+    major_incident=major_incident,
+    major_story=major_story,
     generated_date=time.strftime("%d-%b-%Y %H:%M"),
     source_file=os.path.basename(EXCEL_FILE)
 )
