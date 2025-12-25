@@ -56,7 +56,6 @@ table.uptime-table{
   width:100%;
   border-collapse:collapse;
   font-size:13px;
-  background:#ffffff;
 }
 table.uptime-table th{
   background:#e01e7e;
@@ -67,15 +66,17 @@ table.uptime-table th{
 table.uptime-table td{
   padding:8px;
   border:1px solid #ddd;
-  background:#ffffff;
 }
 
-/* ALTERNATE ROW COLORS */
-table.uptime-table tbody tr:nth-child(even) td{
+/* ✅ ALTERNATE ROW COLORS (FIXED) */
+table.uptime-table tbody tr:nth-child(odd){
+  background:#ffffff;
+}
+table.uptime-table tbody tr:nth-child(even){
   background:#f5f5f5;
 }
 
-/* UPTIME COLORS */
+/* UPTIME COLORS (TEXT ONLY) */
 .uptime-good{color:#0a8a0a;font-weight:600;}
 .uptime-bad{color:#d60000;font-weight:600;}
 
@@ -135,7 +136,7 @@ table.uptime-table tbody tr:nth-child(even) td{
 
 <!-- FOOTER -->
 <div class="footer">
-  <p style="margin:0 0 10px 0;">
+  <p>
     For any production related incident and support, contact
     <a href="mailto:incident@businessnext.com"
        style="color:#e01e7e;text-decoration:none;">
@@ -143,7 +144,7 @@ table.uptime-table tbody tr:nth-child(even) td{
     </a>
   </p>
 
-  <p style="margin:0 0 10px 0;">
+  <p>
     Best Regards,<br>
     Atin Gambhir | Manager – ITSM (CDG)
   </p>
@@ -152,7 +153,7 @@ table.uptime-table tbody tr:nth-child(even) td{
     src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
     alt="BusinessNext"
     width="85"
-    style="display:block;border:0;outline:none;text-decoration:none;"
+    style="display:block;border:0;"
   >
 
   <div style="margin-top:6px;">
