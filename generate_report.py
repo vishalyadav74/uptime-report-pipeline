@@ -6,18 +6,17 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
-# -----------------------------
+# ---------------------------------
 # Pick LATEST dated Excel file
 # uptime_latest_25th Dec_2025.xlsx
-# -----------------------------
+# ---------------------------------
 def extract_date_from_filename(filename):
-    match = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
-    if not match:
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
+    if not m:
         return None
     try:
         return datetime.strptime(
-            f"{match.group(1)} {match.group(3)} {match.group(4)}",
-            "%d %b %Y"
+            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
         )
     except:
         return None
@@ -35,15 +34,14 @@ def find_excel():
 EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
-# -----------------------------
+# ---------------------------------
 # Helpers
-# -----------------------------
+# ---------------------------------
 def get_cell_display(cell):
     if cell.value is None:
         return ""
     if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
-        decimals = len(re.findall(r'0', cell.number_format))
-        return f"{cell.value * 100:.{decimals}f}%"
+        return f"{cell.value * 100:.2f}%"
     return str(cell.value)
 
 
@@ -56,9 +54,9 @@ def wrap_uptime(val):
         return val
 
 
-# -----------------------------
+# ---------------------------------
 # Read sheet EXACT
-# -----------------------------
+# ---------------------------------
 def read_sheet_exact(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet]
@@ -72,31 +70,33 @@ def read_sheet_exact(sheet):
         if any(row):
             rows.append(row)
 
-    # Inject uptime color
-    for col in ["Total Uptime", "YTD uptime"]:
-        if col in headers:
-            idx = headers.index(col)
+    # Apply uptime coloring to ALL uptime columns
+    for idx, h in enumerate(headers):
+        if "uptime" in h.lower():
             for r in rows:
                 r[idx] = wrap_uptime(r[idx])
 
+    # Build HTML with alternate COLUMN coloring
     html = "<table class='uptime-table'><thead><tr>"
-    for h in headers:
-        html += f"<th>{h}</th>"
+    for i, h in enumerate(headers):
+        cls = "col-alt" if i % 2 else ""
+        html += f"<th class='{cls}'>{h}</th>"
     html += "</tr></thead><tbody>"
 
     for r in rows:
         html += "<tr>"
-        for v in r:
-            html += f"<td>{v}</td>"
+        for i, v in enumerate(r):
+            cls = "col-alt" if i % 2 else ""
+            html += f"<td class='{cls}'>{v}</td>"
         html += "</tr>"
 
     html += "</tbody></table>"
     return title, headers, rows, html
 
 
-# -----------------------------
+# ---------------------------------
 # Downtime helper
-# -----------------------------
+# ---------------------------------
 def downtime_to_minutes(txt):
     if not txt:
         return 0
@@ -108,9 +108,9 @@ def downtime_to_minutes(txt):
     return mins
 
 
-# -----------------------------
+# ---------------------------------
 # Load sheets
-# -----------------------------
+# ---------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
 sheets = wb.sheetnames
 
@@ -120,9 +120,9 @@ quarterly_range = quarterly_table = ""
 if len(sheets) > 1:
     quarterly_range, _, _, quarterly_table = read_sheet_exact(sheets[1])
 
-# -----------------------------
+# ---------------------------------
 # Major Incident (Weekly)
-# -----------------------------
+# ---------------------------------
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
@@ -143,9 +143,9 @@ if "Total Downtime(In Mins)" in weekly_headers:
             f"of <b>{major_incident['outage']}</b> during the week."
         )
 
-# -----------------------------
+# ---------------------------------
 # Render HTML
-# -----------------------------
+# ---------------------------------
 with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
     template = Template(f.read())
 
