@@ -4,12 +4,10 @@ import os
 import sys
 import glob
 import time
-import numbers
 
 # -----------------------------
 # CONFIG
 # -----------------------------
-SLA_THRESHOLD = 99.9
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
@@ -45,58 +43,20 @@ if not os.path.exists(EXCEL_FILE):
 print(f"✅ Processing Excel: {EXCEL_FILE}")
 
 # -----------------------------
-# HELPERS
-# -----------------------------
-def parse_downtime_to_minutes(val):
-    if val is None:
-        return 0
-
-    if isinstance(val, pd.Series):
-        val = val.iloc[0]
-
-    if isinstance(val, numbers.Number):
-        return float(val)
-
-    if pd.isna(val):
-        return 0
-
-    val = str(val).lower()
-    minutes = 0
-
-    try:
-        if "hr" in val:
-            minutes += int(val.split("hr")[0].split()[-1]) * 60
-        if "min" in val:
-            minutes += int(val.split("min")[0].split()[-1])
-        if "sec" in val:
-            minutes += int(val.split("sec")[0].split()[-1]) / 60
-    except:
-        pass
-
-    return round(minutes, 2)
-
-def format_uptime(val):
-    if pd.isna(val):
-        return "N/A"
-
-    val = str(val).replace("%", "").strip()
-    uptime = float(val)
-
-    css = "good" if uptime >= SLA_THRESHOLD else "bad"
-    return f'<span class="{css}">{uptime:.2f}%</span>'
-
-# -----------------------------
 # READ & CLEAN SHEET
 # -----------------------------
 def read_uptime_sheet(sheet_name, is_quarterly=False):
     raw = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name, header=None)
 
+    # Title from A1
     title = str(raw.iloc[0, 0]).strip()
 
+    # Header + data
     df = raw.iloc[1:].copy()
     df.columns = raw.iloc[1]
     df = df.iloc[1:].reset_index(drop=True)
 
+    # Clean column names
     df.columns = (
         df.columns
         .astype(str)
@@ -104,8 +64,10 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
         .str.strip()
     )
 
+    # Remove duplicate columns
     df = df.loc[:, ~df.columns.duplicated()]
 
+    # Column normalization
     COLUMN_MAP = {
         "account name": "Account Name",
         "total uptime": "Total Uptime",
@@ -125,7 +87,7 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
 
     df = df.rename(columns=rename_cols)
 
-    # Mandatory columns (RCA optional for quarterly)
+    # Required columns
     required_cols = [
         "Account Name",
         "Total Uptime",
@@ -142,14 +104,14 @@ def read_uptime_sheet(sheet_name, is_quarterly=False):
         if col not in df.columns:
             raise Exception(f"❌ Missing required column in {sheet_name}: {col}")
 
-    # Quarterly: add empty RCA column
+    # Quarterly: add empty RCA if missing
     if is_quarterly and "RCA of Outage" not in df.columns:
         df["RCA of Outage"] = ""
 
     df = df[required_cols + (["RCA of Outage"] if is_quarterly else [])]
 
-    df["Total Uptime"] = df["Total Uptime"].apply(format_uptime)
-    df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(parse_downtime_to_minutes)
+    # Total Uptime AS-IS (Excel value)
+    df["Total Uptime"] = df["Total Uptime"].astype(str)
 
     html_table = df.to_html(index=False, classes="uptime-table", escape=False)
 
@@ -176,25 +138,6 @@ if quarterly_sheet:
     )
 
 # -----------------------------
-# MAJOR INCIDENT (Weekly only)
-# -----------------------------
-major_incident = {"account": "N/A", "outage": "0 mins", "rca": ""}
-major_story = "No unplanned outages observed during this period."
-
-if weekly_df["Outage Minutes"].max() > 0:
-    row = weekly_df.loc[weekly_df["Outage Minutes"].idxmax()]
-    major_incident = {
-        "account": row["Account Name"],
-        "outage": f"{int(row['Outage Minutes'])} mins",
-        "rca": row.get("RCA of Outage", "")
-    }
-    major_story = (
-        f"<b>{row['Account Name']}</b> experienced the highest outage of "
-        f"<b>{int(row['Outage Minutes'])} minutes</b>.<br>"
-        f"<b>Root Cause:</b> {row.get('RCA of Outage', '')}"
-    )
-
-# -----------------------------
 # RENDER HTML
 # -----------------------------
 template_path = os.path.join(BASE_DIR, "uptime_template.html")
@@ -206,8 +149,6 @@ html = template.render(
     quarterly_range=quarterly_range,
     weekly_table=weekly_table,
     quarterly_table=quarterly_table,
-    major_incident=major_incident,
-    major_story=major_story,
     generated_date=time.strftime("%d-%b-%Y %H:%M"),
     source_file=os.path.basename(EXCEL_FILE)
 )
