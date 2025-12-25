@@ -89,9 +89,6 @@ table.uptime-table tr:nth-child(even) {
   background:#f7f7f7;
 }
 
-.good { color:green; font-weight:600; }
-.bad { color:red; font-weight:600; }
-
 .footer {
   background:#f6f6f6;
   padding:20px 30px;
@@ -111,21 +108,15 @@ table.uptime-table tr:nth-child(even) {
     <p>Weekly & Quarterly Availability Summary</p>
   </div>
 
-  <!-- INTRO TEXT -->
-  <div style="
-    padding:18px 30px;
-    font-size:14px;
-    line-height:1.6;
-    background:#fafafa;
-    border-bottom:1px solid #e5e5e5;
-  ">
+  <!-- INTRO -->
+  <div style="padding:18px 30px;font-size:14px;line-height:1.6;background:#fafafa;border-bottom:1px solid #e5e5e5;">
     Hi Sir,<br><br>
     Please find below the <b>Application Uptime metrics</b> for all our SaaS
     accounts along with the corresponding remarks and RCA
     stating the relevant justification for any observed downtime.
   </div>
 
-  <!-- MAJOR INCIDENT CARD -->
+  <!-- MAJOR INCIDENT -->
   <div class="cards">
     <div class="card">
       <h2>🚨 Major Incident of the Week</h2>
@@ -133,13 +124,11 @@ table.uptime-table tr:nth-child(even) {
         <b>Account:</b> {{ major_incident.account }} <br>
         <b>Outage Downtime:</b> {{ major_incident.outage }}
       </p>
-      <p>
-        {{ major_story | safe }}
-      </p>
+      <p>{{ major_story | safe }}</p>
     </div>
   </div>
 
-  <!-- WEEKLY TABLE -->
+  <!-- WEEKLY -->
   <div class="section">
     <div class="section-title">
       Weekly Uptime Data ({{ weekly_range }})
@@ -147,7 +136,7 @@ table.uptime-table tr:nth-child(even) {
     {{ weekly_table | safe }}
   </div>
 
-  <!-- QUARTERLY TABLE -->
+  <!-- QUARTERLY -->
   <div class="section">
     <div class="section-title">
       Quarterly Uptime Data ({{ quarterly_range }})
@@ -160,9 +149,9 @@ table.uptime-table tr:nth-child(even) {
 
     <p style="margin:0 0 8px 0;">
       For urgent assistance, contact
-      <a href="mailto:yv741518@gmail.com"
+      <a href="mailto:incident@businessnext.com"
          style="color:#e01e7e;text-decoration:none;">
-        yv741518@gmail.com
+        incident@businessnext.com
       </a>
     </p>
 
