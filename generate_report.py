@@ -48,19 +48,16 @@ print(f"✅ Processing Excel: {EXCEL_FILE}")
 # HELPERS
 # -----------------------------
 def parse_downtime_to_minutes(val):
-    """
-    Safe parser:
-    - If number → return directly
-    - If string → parse hrs/min/sec
-    """
     if val is None:
         return 0
 
-    # ✅ If already numeric (MOST IMPORTANT FIX)
+    # 🔐 If accidentally Series → take first value
+    if isinstance(val, pd.Series):
+        val = val.iloc[0]
+
     if isinstance(val, numbers.Number):
         return float(val)
 
-    # Handle empty / NaN
     if pd.isna(val):
         return 0
 
@@ -111,6 +108,9 @@ def read_uptime_sheet(sheet_name):
         .str.strip()
     )
 
+    # 🔥 REMOVE DUPLICATE COLUMNS (CRITICAL FIX)
+    df = df.loc[:, ~df.columns.duplicated()]
+
     # Flexible mapping
     COLUMN_MAP = {
         "account name": "Account Name",
@@ -131,7 +131,7 @@ def read_uptime_sheet(sheet_name):
 
     df = df.rename(columns=rename_cols)
 
-    required_cols = list(COLUMN_MAP.values())
+    required_cols = list(dict.fromkeys(COLUMN_MAP.values()))
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise Exception(f"❌ Missing required columns in Excel: {missing}")
@@ -141,10 +141,9 @@ def read_uptime_sheet(sheet_name):
     # Formatting
     df["Total Uptime"] = df["Total Uptime"].apply(format_uptime)
 
-    # ✅ SAFE APPLY (FIXED)
-    df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(
-        lambda x: parse_downtime_to_minutes(x)
-    )
+    # 🔐 Always Series now
+    downtime_series = df["Total Downtime(In Mins)"]
+    df["Outage Minutes"] = downtime_series.apply(parse_downtime_to_minutes)
 
     html_table = df.to_html(index=False, classes="uptime-table", escape=False)
 
@@ -163,7 +162,7 @@ print("📑 Quarterly Sheet:", quarterly_sheet)
 weekly_range, weekly_df, weekly_table = read_uptime_sheet(weekly_sheet)
 
 quarterly_range = ""
-quarterly_table = "<p>No quarterly data</p>"
+quarterly_table = "<p>No quarterly data available</p>"
 if quarterly_sheet:
     quarterly_range, quarterly_df, quarterly_table = read_uptime_sheet(quarterly_sheet)
 
