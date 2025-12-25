@@ -51,7 +51,6 @@ def parse_downtime_to_minutes(val):
     if val is None:
         return 0
 
-    # 🔐 If accidentally Series → take first value
     if isinstance(val, pd.Series):
         val = val.iloc[0]
 
@@ -89,18 +88,15 @@ def format_uptime(val):
 # -----------------------------
 # READ & CLEAN SHEET
 # -----------------------------
-def read_uptime_sheet(sheet_name):
+def read_uptime_sheet(sheet_name, is_quarterly=False):
     raw = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name, header=None)
 
-    # Title from A1
     title = str(raw.iloc[0, 0]).strip()
 
-    # Header + data
     df = raw.iloc[1:].copy()
     df.columns = raw.iloc[1]
     df = df.iloc[1:].reset_index(drop=True)
 
-    # Clean column names
     df.columns = (
         df.columns
         .astype(str)
@@ -108,10 +104,8 @@ def read_uptime_sheet(sheet_name):
         .str.strip()
     )
 
-    # 🔥 REMOVE DUPLICATE COLUMNS (CRITICAL FIX)
     df = df.loc[:, ~df.columns.duplicated()]
 
-    # Flexible mapping
     COLUMN_MAP = {
         "account name": "Account Name",
         "total uptime": "Total Uptime",
@@ -131,19 +125,31 @@ def read_uptime_sheet(sheet_name):
 
     df = df.rename(columns=rename_cols)
 
-    required_cols = list(dict.fromkeys(COLUMN_MAP.values()))
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        raise Exception(f"❌ Missing required columns in Excel: {missing}")
+    # Mandatory columns (RCA optional for quarterly)
+    required_cols = [
+        "Account Name",
+        "Total Uptime",
+        "Planned Downtime",
+        "Outage Downtime",
+        "Total Downtime(In Mins)",
+        "Remarks"
+    ]
 
-    df = df[required_cols]
+    if not is_quarterly:
+        required_cols.append("RCA of Outage")
 
-    # Formatting
+    for col in required_cols:
+        if col not in df.columns:
+            raise Exception(f"❌ Missing required column in {sheet_name}: {col}")
+
+    # Quarterly: add empty RCA column
+    if is_quarterly and "RCA of Outage" not in df.columns:
+        df["RCA of Outage"] = ""
+
+    df = df[required_cols + (["RCA of Outage"] if is_quarterly else [])]
+
     df["Total Uptime"] = df["Total Uptime"].apply(format_uptime)
-
-    # 🔐 Always Series now
-    downtime_series = df["Total Downtime(In Mins)"]
-    df["Outage Minutes"] = downtime_series.apply(parse_downtime_to_minutes)
+    df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(parse_downtime_to_minutes)
 
     html_table = df.to_html(index=False, classes="uptime-table", escape=False)
 
@@ -153,6 +159,7 @@ def read_uptime_sheet(sheet_name):
 # LOAD SHEETS
 # -----------------------------
 xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
+
 weekly_sheet = xls.sheet_names[0]
 quarterly_sheet = xls.sheet_names[1] if len(xls.sheet_names) > 1 else None
 
@@ -164,10 +171,12 @@ weekly_range, weekly_df, weekly_table = read_uptime_sheet(weekly_sheet)
 quarterly_range = ""
 quarterly_table = "<p>No quarterly data available</p>"
 if quarterly_sheet:
-    quarterly_range, quarterly_df, quarterly_table = read_uptime_sheet(quarterly_sheet)
+    quarterly_range, quarterly_df, quarterly_table = read_uptime_sheet(
+        quarterly_sheet, is_quarterly=True
+    )
 
 # -----------------------------
-# MAJOR INCIDENT
+# MAJOR INCIDENT (Weekly only)
 # -----------------------------
 major_incident = {"account": "N/A", "outage": "0 mins", "rca": ""}
 major_story = "No unplanned outages observed during this period."
@@ -177,12 +186,12 @@ if weekly_df["Outage Minutes"].max() > 0:
     major_incident = {
         "account": row["Account Name"],
         "outage": f"{int(row['Outage Minutes'])} mins",
-        "rca": row["RCA of Outage"]
+        "rca": row.get("RCA of Outage", "")
     }
     major_story = (
         f"<b>{row['Account Name']}</b> experienced the highest outage of "
         f"<b>{int(row['Outage Minutes'])} minutes</b>.<br>"
-        f"<b>Root Cause:</b> {row['RCA of Outage']}"
+        f"<b>Root Cause:</b> {row.get('RCA of Outage', '')}"
     )
 
 # -----------------------------
