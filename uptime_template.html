@@ -27,8 +27,17 @@ body{
 .header h1{margin:0;}
 .header p{margin-top:6px;font-size:14px;}
 
+/* SECTIONS */
+.section{padding:20px 30px;}
+.section-title{
+  background:#ececec;
+  padding:8px 12px;
+  font-weight:600;
+  margin-bottom:10px;
+}
+
 /* MAJOR INCIDENT */
-.cards{padding:20px 30px;}
+.cards{padding:0 30px;}
 .card{
   background:#fff3f6;
   border-left:6px solid #e01e7e;
@@ -41,15 +50,6 @@ body{
   font-size:18px;
 }
 .card p{font-size:13px;margin:6px 0;}
-
-/* SECTIONS */
-.section{padding:20px 30px;}
-.section-title{
-  background:#ececec;
-  padding:8px 12px;
-  font-weight:600;
-  margin-bottom:10px;
-}
 
 /* TABLE */
 table.uptime-table{
@@ -68,7 +68,7 @@ table.uptime-table td{
   border:1px solid #ddd;
 }
 
-/* ✅ ALTERNATE ROW COLORS (FIXED) */
+/* ALTERNATE ROW COLORS */
 table.uptime-table tbody tr:nth-child(odd){
   background:#ffffff;
 }
@@ -76,7 +76,7 @@ table.uptime-table tbody tr:nth-child(even){
   background:#f5f5f5;
 }
 
-/* UPTIME COLORS (TEXT ONLY) */
+/* UPTIME COLORS */
 .uptime-good{color:#0a8a0a;font-weight:600;}
 .uptime-bad{color:#d60000;font-weight:600;}
 
@@ -107,6 +107,9 @@ table.uptime-table tbody tr:nth-child(even){
   for any observed downtime.
 </div>
 
+<!-- SPACER -->
+<div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>
+
 <!-- MAJOR INCIDENT -->
 <div class="cards">
   <div class="card">
@@ -120,11 +123,17 @@ table.uptime-table tbody tr:nth-child(even){
   </div>
 </div>
 
+<!-- SPACER -->
+<div style="height:22px;line-height:22px;font-size:0;">&nbsp;</div>
+
 <!-- WEEKLY -->
 <div class="section">
   <div class="section-title">{{ weekly_title }}</div>
   {{ weekly_table | safe }}
 </div>
+
+<!-- SPACER -->
+<div style="height:22px;line-height:22px;font-size:0;">&nbsp;</div>
 
 <!-- QUARTERLY -->
 {% if quarterly_table %}
@@ -134,9 +143,12 @@ table.uptime-table tbody tr:nth-child(even){
 </div>
 {% endif %}
 
+<!-- SPACER -->
+<div style="height:24px;line-height:24px;font-size:0;">&nbsp;</div>
+
 <!-- FOOTER -->
 <div class="footer">
-  <p>
+  <p style="margin:0 0 10px 0;">
     For any production related incident and support, contact
     <a href="mailto:incident@businessnext.com"
        style="color:#e01e7e;text-decoration:none;">
@@ -144,7 +156,7 @@ table.uptime-table tbody tr:nth-child(even){
     </a>
   </p>
 
-  <p>
+  <p style="margin:0 0 10px 0;">
     Best Regards,<br>
     Atin Gambhir | Manager – ITSM (CDG)
   </p>
