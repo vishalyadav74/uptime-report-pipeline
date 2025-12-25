@@ -5,33 +5,63 @@ import sys
 import glob
 import time
 import re
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
 # -----------------------------
-# Pick Excel file
+# Pick LATEST dated Excel file
+# Expected name: uptime_latest_25th Dec_2025.xlsx
 # -----------------------------
+def extract_date_from_filename(filename):
+    match = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
+    if not match:
+        return None
+
+    day = match.group(1)
+    month = match.group(3)
+    year = match.group(4)
+
+    try:
+        return datetime.strptime(f"{day} {month} {year}", "%d %b %Y")
+    except ValueError:
+        return None
+
+
 def find_excel():
     files = []
     for ext in ("*.xlsx", "*.xls"):
         files.extend(glob.glob(ext))
+
     if not files:
-        raise Exception("No Excel file found")
-    files.sort()
-    return files[0]
+        raise Exception("❌ No Excel file found")
+
+    dated_files = []
+    for f in files:
+        date = extract_date_from_filename(f)
+        if date:
+            dated_files.append((date, f))
+
+    if not dated_files:
+        raise Exception("❌ No Excel file with valid date format found")
+
+    # Pick latest date
+    dated_files.sort(reverse=True)
+    return dated_files[0][1]
+
 
 EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
 # -----------------------------
-# Helper: format cell EXACTLY like Excel
+# Helper: show EXACT Excel display
 # -----------------------------
 def get_cell_display(cell):
     if cell.value is None:
         return ""
 
-    # Percentage formatting
+    # Percentage formatting (keep exactly like Excel)
     if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
         decimals = 0
         match = re.search(r"\.(0+)%", cell.number_format)
@@ -79,14 +109,18 @@ def read_sheet_exact(sheet_name):
 def downtime_to_minutes(text):
     if not text:
         return 0
+
     text = text.lower()
     mins = 0
+
     hrs = re.search(r'(\d+)\s*hr', text)
     mins_m = re.search(r'(\d+)\s*min', text)
+
     if hrs:
         mins += int(hrs.group(1)) * 60
     if mins_m:
         mins += int(mins_m.group(1))
+
     return mins
 
 # -----------------------------
@@ -103,7 +137,7 @@ if len(sheets) > 1:
     quarterly_range, q_headers, q_rows, quarterly_table = read_sheet_exact(sheets[1])
 
 # -----------------------------
-# Major Incident (Weekly)
+# Major Incident (Weekly only)
 # -----------------------------
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
