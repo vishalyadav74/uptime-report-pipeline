@@ -8,17 +8,13 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
 # ----------------------------------
 # Pick LATEST dated Excel file
-# uptime_latest_25th Dec_2025.xlsx
 # ----------------------------------
 def extract_date_from_filename(filename):
-    match = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
-    if not match:
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
+    if not m:
         return None
     try:
-        return datetime.strptime(
-            f"{match.group(1)} {match.group(3)} {match.group(4)}",
-            "%d %b %Y"
-        )
+        return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
     except:
         return None
 
@@ -52,21 +48,22 @@ def wrap_uptime(val):
         return val
 
 # ----------------------------------
-# Read sheet EXACT (title from A1)
+# Read sheet EXACT & SAFE
 # ----------------------------------
 def read_sheet_exact(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet_name]
 
     title = ws["A1"].value or ""
-    headers = [c.value or "" for c in ws[2]]
+    raw_headers = [c.value or "" for c in ws[2]]
 
-    # ✅ HARD STOP AFTER "RCA of Outage"
-    end_idx = len(headers)
-    if "RCA of Outage" in headers:
-        end_idx = headers.index("RCA of Outage") + 1
+    # 🔥 HARD STOP after RCA of Outage
+    if "RCA of Outage" in raw_headers:
+        end_idx = raw_headers.index("RCA of Outage") + 1
+    else:
+        end_idx = len(raw_headers)
 
-    headers = headers[:end_idx]
+    headers = raw_headers[:end_idx]
 
     rows = []
     for r in ws.iter_rows(min_row=3, max_col=end_idx):
@@ -74,7 +71,7 @@ def read_sheet_exact(sheet_name):
         if any(row):
             rows.append(row)
 
-    # Apply uptime coloring
+    # 🎨 Apply uptime coloring (weekly + quarterly)
     for col in ["Total Uptime", "YTD uptime"]:
         if col in headers:
             idx = headers.index(col)
@@ -123,33 +120,29 @@ if len(sheets) > 1:
     quarterly_title, quarterly_table, _, _ = read_sheet_exact(sheets[1])
 
 # ----------------------------------
-# Major Incident (Weekly only)
-# ✅ BASED ONLY ON "Outage Downtime"
+# Major Incident (Weekly)
 # ----------------------------------
-major_incident = {"account": "", "outage": ""}
+major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
 if "Outage Downtime" in weekly_headers and "Account Name" in weekly_headers:
-    idx_outage = weekly_headers.index("Outage Downtime")
-    idx_account = weekly_headers.index("Account Name")
+    idx_out = weekly_headers.index("Outage Downtime")
+    idx_acc = weekly_headers.index("Account Name")
+    idx_rca = weekly_headers.index("RCA of Outage") if "RCA of Outage" in weekly_headers else None
 
-    max_minutes = -1
-    max_row = None
+    max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_out]))
 
-    for row in weekly_rows:
-        minutes = downtime_to_minutes(row[idx_outage])
-        if minutes > max_minutes:
-            max_minutes = minutes
-            max_row = row
-
-    if max_row and max_minutes > 0:
+    if downtime_to_minutes(max_row[idx_out]) > 0:
         major_incident = {
-            "account": max_row[idx_account],
-            "outage": max_row[idx_outage]
+            "account": max_row[idx_acc],
+            "outage": max_row[idx_out],
+            "rca": max_row[idx_rca] if idx_rca is not None else ""
         }
+
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
-            f"of <b>{major_incident['outage']}</b> during the week."
+            f"of <b>{major_incident['outage']}</b> during the week.<br>"
+            f"<b>RCA:</b> {major_incident['rca']}"
         )
 
 # ----------------------------------
