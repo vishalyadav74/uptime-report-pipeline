@@ -6,6 +6,13 @@ import glob
 import time
 
 # -----------------------------
+# CONFIG
+# -----------------------------
+SLA_THRESHOLD = 99.9
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+
+# -----------------------------
 # SMART EXCEL FILE DETECTOR
 # -----------------------------
 def find_best_excel_file():
@@ -22,14 +29,7 @@ def find_best_excel_file():
     return files[0]
 
 # -----------------------------
-# CONFIG
-# -----------------------------
-SLA_THRESHOLD = 99.9
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-
-# -----------------------------
-# EXCEL FILE INPUT
+# EXCEL INPUT
 # -----------------------------
 if len(sys.argv) > 1:
     EXCEL_FILE = sys.argv[1]
@@ -39,12 +39,12 @@ else:
     EXCEL_FILE = find_best_excel_file()
 
 if not os.path.exists(EXCEL_FILE):
-    raise Exception(f"Excel file not found: {EXCEL_FILE}")
+    raise Exception(f"❌ Excel file not found: {EXCEL_FILE}")
 
 print(f"✅ Processing Excel: {EXCEL_FILE}")
 
 # -----------------------------
-# HELPER FUNCTIONS
+# HELPERS
 # -----------------------------
 def parse_downtime_to_minutes(val):
     if pd.isna(val):
@@ -53,12 +53,15 @@ def parse_downtime_to_minutes(val):
     val = str(val).lower()
     minutes = 0
 
-    if "hr" in val:
-        minutes += int(val.split("hr")[0].split()[-1]) * 60
-    if "min" in val:
-        minutes += int(val.split("min")[0].split()[-1])
-    if "sec" in val:
-        minutes += int(val.split("sec")[0].split()[-1]) / 60
+    try:
+        if "hr" in val:
+            minutes += int(val.split("hr")[0].split()[-1]) * 60
+        if "min" in val:
+            minutes += int(val.split("min")[0].split()[-1])
+        if "sec" in val:
+            minutes += int(val.split("sec")[0].split()[-1]) / 60
+    except:
+        pass
 
     return round(minutes, 2)
 
@@ -72,32 +75,62 @@ def format_uptime(val):
     css = "good" if uptime >= SLA_THRESHOLD else "bad"
     return f'<span class="{css}">{uptime:.2f}%</span>'
 
+# -----------------------------
+# READ & CLEAN SHEET
+# -----------------------------
 def read_uptime_sheet(sheet_name):
     """
     Handles:
-    - Title in row 1 (A1)
+    - Title in row 1
     - Headers in row 2
+    - Flexible column names
     """
     raw = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name, header=None)
 
+    # Title (A1)
     title = str(raw.iloc[0, 0]).strip()
 
+    # Header + data
     df = raw.iloc[1:].copy()
     df.columns = raw.iloc[1]
     df = df.iloc[1:].reset_index(drop=True)
 
-    expected_cols = [
-        "Account Name",
-        "Total Uptime",
-        "Planned Downtime",
-        "Outage Downtime",
-        "Total Downtime(In Mins)",
-        "Remarks",
-        "RCA of Outage"
-    ]
+    # Clean column names
+    df.columns = (
+        df.columns
+          .astype(str)
+          .str.replace("\n", " ")
+          .str.strip()
+    )
 
-    df = df[expected_cols]
+    # Flexible column mapping
+    COLUMN_MAP = {
+        "account name": "Account Name",
+        "total uptime": "Total Uptime",
+        "planned downtime": "Planned Downtime",
+        "outage downtime": "Outage Downtime",
+        "total downtime(in mins)": "Total Downtime(In Mins)",
+        "total downtime (in mins)": "Total Downtime(In Mins)",
+        "remarks": "Remarks",
+        "rca of outage": "RCA of Outage"
+    }
 
+    rename_cols = {}
+    for col in df.columns:
+        key = col.lower()
+        if key in COLUMN_MAP:
+            rename_cols[col] = COLUMN_MAP[key]
+
+    df = df.rename(columns=rename_cols)
+
+    required_cols = list(COLUMN_MAP.values())
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise Exception(f"❌ Missing required columns in Excel: {missing}")
+
+    df = df[required_cols]
+
+    # Formatting
     df["Total Uptime"] = df["Total Uptime"].apply(format_uptime)
     df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(parse_downtime_to_minutes)
 
@@ -106,7 +139,7 @@ def read_uptime_sheet(sheet_name):
     return title, df, html_table
 
 # -----------------------------
-# READ SHEETS
+# LOAD SHEETS
 # -----------------------------
 xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
 
@@ -118,16 +151,16 @@ print("📑 Quarterly Sheet:", quarterly_sheet)
 
 weekly_range, weekly_df, weekly_table = read_uptime_sheet(weekly_sheet)
 
-quarterly_table = "<p>No quarterly data</p>"
 quarterly_range = ""
+quarterly_table = "<p>No quarterly data available</p>"
 if quarterly_sheet:
     quarterly_range, quarterly_df, quarterly_table = read_uptime_sheet(quarterly_sheet)
 
 # -----------------------------
-# MAJOR INCIDENT LOGIC
+# MAJOR INCIDENT
 # -----------------------------
 major_incident = {"account": "N/A", "outage": "0 mins", "rca": ""}
-major_story = "No unplanned outages observed."
+major_story = "No unplanned outages observed during this period."
 
 if weekly_df["Outage Minutes"].max() > 0:
     row = weekly_df.loc[weekly_df["Outage Minutes"].idxmax()]
@@ -137,7 +170,7 @@ if weekly_df["Outage Minutes"].max() > 0:
         "rca": row["RCA of Outage"]
     }
     major_story = (
-        f"<b>{row['Account Name']}</b> had the highest outage of "
+        f"<b>{row['Account Name']}</b> experienced the highest outage of "
         f"<b>{int(row['Outage Minutes'])} minutes</b>.<br>"
         f"<b>Root Cause:</b> {row['RCA of Outage']}"
     )
@@ -166,6 +199,6 @@ output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
 with open(output_file, "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ REPORT GENERATED")
+print("\n✅ REPORT GENERATED SUCCESSFULLY")
 print("📄 Output:", output_file)
-print("📊 Weekly Records:", len(weekly_df))
+print("📊 Weekly records:", len(weekly_df))
