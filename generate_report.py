@@ -1,4 +1,4 @@
-import pandas as pd
+from openpyxl import load_workbook
 from jinja2 import Template
 import os
 import sys
@@ -25,31 +25,45 @@ EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
 # -----------------------------
-# Read sheet EXACTLY as text
+# Read sheet EXACTLY as displayed
 # -----------------------------
 def read_sheet_exact(sheet_name):
-    raw = pd.read_excel(
-        EXCEL_FILE,
-        sheet_name=sheet_name,
-        header=None,
-        dtype=str,
-        keep_default_na=False
-    )
+    wb = load_workbook(EXCEL_FILE, data_only=True)
+    ws = wb[sheet_name]
 
-    title = raw.iloc[0, 0]
+    # Title (A1)
+    title = ws["A1"].value or ""
 
-    df = raw.iloc[1:].copy()
-    df.columns = raw.iloc[1]
-    df = df.iloc[1:].reset_index(drop=True)
+    # Header row (row 2)
+    headers = [cell.value for cell in ws[2]]
 
-    # remove duplicate columns only
-    df = df.loc[:, ~df.columns.duplicated()]
+    data = []
+    for row in ws.iter_rows(min_row=3, values_only=False):
+        row_data = []
+        for cell in row:
+            # cell.text = EXACT Excel display value
+            row_data.append(cell.text if cell.text is not None else "")
+        if any(row_data):
+            data.append(row_data)
 
-    html = df.to_html(index=False, classes="uptime-table", escape=False)
-    return title, df, html
+    # Build HTML manually (no pandas at all)
+    html = '<table class="uptime-table">\n<thead>\n<tr>'
+    for h in headers:
+        html += f"<th>{h}</th>"
+    html += "</tr>\n</thead>\n<tbody>\n"
+
+    for row in data:
+        html += "<tr>"
+        for val in row:
+            html += f"<td>{val}</td>"
+        html += "</tr>\n"
+
+    html += "</tbody>\n</table>"
+
+    return title, headers, data, html
 
 # -----------------------------
-# Downtime parser ONLY for comparison
+# Downtime comparison helper (weekly only)
 # -----------------------------
 def downtime_to_minutes(text):
     if not text:
@@ -67,16 +81,15 @@ def downtime_to_minutes(text):
 # -----------------------------
 # Load sheets
 # -----------------------------
-xls = pd.ExcelFile(EXCEL_FILE)
-weekly_sheet = xls.sheet_names[0]
-quarterly_sheet = xls.sheet_names[1] if len(xls.sheet_names) > 1 else None
+wb = load_workbook(EXCEL_FILE, data_only=True)
+sheets = wb.sheetnames
 
-weekly_range, weekly_df, weekly_table = read_sheet_exact(weekly_sheet)
+weekly_range, weekly_headers, weekly_rows, weekly_table = read_sheet_exact(sheets[0])
 
 quarterly_range = ""
 quarterly_table = ""
-if quarterly_sheet:
-    quarterly_range, quarterly_df, quarterly_table = read_sheet_exact(quarterly_sheet)
+if len(sheets) > 1:
+    quarterly_range, q_headers, q_rows, quarterly_table = read_sheet_exact(sheets[1])
 
 # -----------------------------
 # Major Incident (Weekly only)
@@ -84,16 +97,25 @@ if quarterly_sheet:
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
-if "Total Downtime(In Mins)" in weekly_df.columns:
-    weekly_df["_cmp"] = weekly_df["Total Downtime(In Mins)"].apply(downtime_to_minutes)
-    idx = weekly_df["_cmp"].idxmax()
+if "Total Downtime(In Mins)" in weekly_headers:
+    idx_downtime = weekly_headers.index("Total Downtime(In Mins)")
+    idx_account = weekly_headers.index("Account Name")
+    idx_rca = weekly_headers.index("RCA of Outage")
 
-    if weekly_df.loc[idx, "_cmp"] > 0:
-        row = weekly_df.loc[idx]
+    max_minutes = -1
+    max_row = None
+
+    for row in weekly_rows:
+        minutes = downtime_to_minutes(row[idx_downtime])
+        if minutes > max_minutes:
+            max_minutes = minutes
+            max_row = row
+
+    if max_row and max_minutes > 0:
         major_incident = {
-            "account": row.get("Account Name", ""),
-            "outage": row.get("Total Downtime(In Mins)", ""),
-            "rca": row.get("RCA of Outage", "")
+            "account": max_row[idx_account],
+            "outage": max_row[idx_downtime],
+            "rca": max_row[idx_rca]
         }
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
