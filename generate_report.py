@@ -4,6 +4,7 @@ import os
 import sys
 import glob
 import time
+import numbers
 
 # -----------------------------
 # CONFIG
@@ -47,6 +48,19 @@ print(f"✅ Processing Excel: {EXCEL_FILE}")
 # HELPERS
 # -----------------------------
 def parse_downtime_to_minutes(val):
+    """
+    Safe parser:
+    - If number → return directly
+    - If string → parse hrs/min/sec
+    """
+    if val is None:
+        return 0
+
+    # ✅ If already numeric (MOST IMPORTANT FIX)
+    if isinstance(val, numbers.Number):
+        return float(val)
+
+    # Handle empty / NaN
     if pd.isna(val):
         return 0
 
@@ -79,15 +93,9 @@ def format_uptime(val):
 # READ & CLEAN SHEET
 # -----------------------------
 def read_uptime_sheet(sheet_name):
-    """
-    Handles:
-    - Title in row 1
-    - Headers in row 2
-    - Flexible column names
-    """
     raw = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name, header=None)
 
-    # Title (A1)
+    # Title from A1
     title = str(raw.iloc[0, 0]).strip()
 
     # Header + data
@@ -98,12 +106,12 @@ def read_uptime_sheet(sheet_name):
     # Clean column names
     df.columns = (
         df.columns
-          .astype(str)
-          .str.replace("\n", " ")
-          .str.strip()
+        .astype(str)
+        .str.replace("\n", " ")
+        .str.strip()
     )
 
-    # Flexible column mapping
+    # Flexible mapping
     COLUMN_MAP = {
         "account name": "Account Name",
         "total uptime": "Total Uptime",
@@ -132,7 +140,11 @@ def read_uptime_sheet(sheet_name):
 
     # Formatting
     df["Total Uptime"] = df["Total Uptime"].apply(format_uptime)
-    df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(parse_downtime_to_minutes)
+
+    # ✅ SAFE APPLY (FIXED)
+    df["Outage Minutes"] = df["Total Downtime(In Mins)"].apply(
+        lambda x: parse_downtime_to_minutes(x)
+    )
 
     html_table = df.to_html(index=False, classes="uptime-table", escape=False)
 
@@ -142,7 +154,6 @@ def read_uptime_sheet(sheet_name):
 # LOAD SHEETS
 # -----------------------------
 xls = pd.ExcelFile(EXCEL_FILE, engine="openpyxl")
-
 weekly_sheet = xls.sheet_names[0]
 quarterly_sheet = xls.sheet_names[1] if len(xls.sheet_names) > 1 else None
 
@@ -152,7 +163,7 @@ print("📑 Quarterly Sheet:", quarterly_sheet)
 weekly_range, weekly_df, weekly_table = read_uptime_sheet(weekly_sheet)
 
 quarterly_range = ""
-quarterly_table = "<p>No quarterly data available</p>"
+quarterly_table = "<p>No quarterly data</p>"
 if quarterly_sheet:
     quarterly_range, quarterly_df, quarterly_table = read_uptime_sheet(quarterly_sheet)
 
