@@ -5,64 +5,163 @@
 <title>SaaS Uptime Report</title>
 
 <style>
-body{font-family:Segoe UI,Arial;background:#f4f6f8;padding:20px}
-.container{max-width:1200px;background:#fff;margin:auto;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
-.header{background:#e01e7e;color:#fff;padding:20px 30px}
+body{
+  font-family:Segoe UI,Arial,sans-serif;
+  background:#f4f6f8;
+  padding:20px;
+}
+
+.container{
+  max-width:1200px;
+  background:#ffffff;
+  margin:auto;
+  border-radius:6px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  overflow:hidden;
+}
+
+.header{
+  background:#e01e7e;
+  color:#ffffff;
+  padding:20px 30px;
+}
+
+.header h1{margin:0}
+.header p{margin:6px 0 0;font-size:14px}
+
 .cards{padding:20px 30px}
-.card{background:#fff3f6;border-left:6px solid #e01e7e;padding:15px;border-radius:6px}
+
+.card{
+  background:#fff3f6;
+  border-left:6px solid #e01e7e;
+  padding:15px 18px;
+  border-radius:6px;
+}
+
+.card h2{
+  margin:0 0 8px 0;
+  color:#e01e7e;
+  font-size:18px;
+}
+
 .section{padding:20px 30px}
-.section-title{background:#ececec;padding:8px 12px;font-weight:600}
-table.uptime-table{width:100%;border-collapse:collapse;font-size:13px}
-th{background:#e01e7e;color:#fff;padding:8px;border:1px solid #ddd}
-td{padding:8px;border:1px solid #ddd}
-tr:nth-child(even){background:#f7f7f7}
-.uptime-good{color:#0a8a0a;font-weight:600}
-.uptime-bad{color:#d60000;font-weight:600}
-.footer{background:#f6f6f6;padding:20px 30px;font-size:13px}
+
+.section-title{
+  background:#ececec;
+  padding:8px 12px;
+  font-weight:600;
+  margin-bottom:10px;
+}
+
+/* TABLE */
+table.uptime-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+table.uptime-table th{
+  background:#e01e7e;
+  color:#ffffff;
+  padding:8px;
+  border:1px solid #ddd;
+}
+
+table.uptime-table td{
+  padding:8px;
+  border:1px solid #ddd;
+}
+
+/* Alternate COLUMN coloring */
+.col-alt{
+  background:#f7f7f7;
+}
+
+/* Uptime coloring */
+.uptime-good{
+  color:#0a8a0a;
+  font-weight:600;
+}
+
+.uptime-bad{
+  color:#d60000;
+  font-weight:600;
+}
+
+/* FOOTER */
+.footer{
+  background:#f6f6f6;
+  padding:20px 30px;
+  font-size:13px;
+  color:#333;
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
-<div class="header">
-<h1>SaaS Accounts Application Uptime Report</h1>
-<p>Weekly & Quarterly Availability Summary</p>
+  <!-- HEADER -->
+  <div class="header">
+    <h1>SaaS Accounts Application Uptime Report</h1>
+    <p>Weekly & Quarterly Availability Summary</p>
+  </div>
+
+  <!-- INTRO -->
+  <div style="padding:18px 30px;background:#fafafa;line-height:1.6">
+    Hi Sir,<br><br>
+    Please find below the <b>Application Uptime metrics</b> for all our SaaS
+    accounts along with the corresponding remarks and RCA.
+  </div>
+
+  <!-- MAJOR INCIDENT -->
+  <div class="cards">
+    <div class="card">
+      <h2>🚨 Major Incident of the Week</h2>
+      <b>Account:</b> {{ major_incident.account }}<br>
+      <b>Outage Downtime:</b> {{ major_incident.outage }}
+      <p>{{ major_story | safe }}</p>
+    </div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div class="section">
+    <div class="section-title">
+      Weekly Uptime Data ({{ weekly_range }})
+    </div>
+    {{ weekly_table | safe }}
+  </div>
+
+  <!-- QUARTERLY -->
+  <div class="section">
+    <div class="section-title">
+      Quarterly Uptime Data ({{ quarterly_range }})
+    </div>
+    {{ quarterly_table | safe }}
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    For urgent assistance, contact
+    <a href="mailto:incident@businessnext.com"
+       style="color:#e01e7e;text-decoration:none;">
+      incident@businessnext.com
+    </a>
+    <br><br>
+
+    Best Regards,<br>
+    Atin Gambhir | Manager – ITSM (CDG)
+    <br><br>
+
+    <img
+      src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
+      alt="BusinessNext"
+      style="height:48px;display:block;"
+    >
+  </div>
+
 </div>
 
-<div style="padding:18px 30px;background:#fafafa">
-Hi Sir,<br><br>
-Please find below the <b>Application Uptime metrics</b> for all our SaaS accounts.
-</div>
-
-<div class="cards">
-<div class="card">
-<h2>🚨 Major Incident of the Week</h2>
-<b>Account:</b> {{ major_incident.account }}<br>
-<b>Outage Downtime:</b> {{ major_incident.outage }}
-<p>{{ major_story | safe }}</p>
-</div>
-</div>
-
-<div class="section">
-<div class="section-title">Weekly Uptime Data ({{ weekly_range }})</div>
-{{ weekly_table | safe }}
-</div>
-
-<div class="section">
-<div class="section-title">Quarterly Uptime Data ({{ quarterly_range }})</div>
-{{ quarterly_table | safe }}
-</div>
-
-<div class="footer">
-For urgent assistance, contact
-<a href="mailto:incident@businessnext.com" style="color:#e01e7e">incident@businessnext.com</a><br><br>
-Best Regards,<br>
-Atin Gambhir| Manager- ITSM(CDG) <br><br>
-<img src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
-     style="height:48px">
-</div>
-
-</div>
 </body>
 </html>
