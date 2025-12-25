@@ -6,15 +6,17 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
-# ----------------------------------
-# Pick LATEST dated Excel file
-# ----------------------------------
-def extract_date_from_filename(filename):
-    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', filename)
+# -------------------------------
+# Pick latest dated Excel
+# -------------------------------
+def extract_date_from_filename(name):
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', name)
     if not m:
         return None
     try:
-        return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+        return datetime.strptime(
+            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
+        )
     except:
         return None
 
@@ -22,16 +24,16 @@ def find_excel():
     files = glob.glob("*.xlsx") + glob.glob("*.xls")
     dated = [(extract_date_from_filename(f), f) for f in files if extract_date_from_filename(f)]
     if not dated:
-        raise Exception("❌ No valid dated Excel file found")
+        raise Exception("❌ No valid dated Excel found")
     dated.sort(reverse=True)
     return dated[0][1]
 
 EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
-# ----------------------------------
+# -------------------------------
 # Helpers
-# ----------------------------------
+# -------------------------------
 def get_cell_display(cell):
     if cell.value is None:
         return ""
@@ -47,17 +49,26 @@ def wrap_uptime(val):
     except:
         return val
 
-# ----------------------------------
-# Read sheet EXACT & SAFE
-# ----------------------------------
-def read_sheet_exact(sheet_name):
+def downtime_to_minutes(txt):
+    if not txt:
+        return 0
+    mins = 0
+    if m := re.search(r'(\d+)\s*hr', txt.lower()):
+        mins += int(m.group(1)) * 60
+    if m := re.search(r'(\d+)\s*min', txt.lower()):
+        mins += int(m.group(1))
+    return mins
+
+# -------------------------------
+# Read sheet safely
+# -------------------------------
+def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb[sheet_name]
+    ws = wb[sheet]
 
     title = ws["A1"].value or ""
     raw_headers = [c.value or "" for c in ws[2]]
 
-    # 🔥 HARD STOP after RCA of Outage
     if "RCA of Outage" in raw_headers:
         end_idx = raw_headers.index("RCA of Outage") + 1
     else:
@@ -71,7 +82,6 @@ def read_sheet_exact(sheet_name):
         if any(row):
             rows.append(row)
 
-    # 🎨 Apply uptime coloring (weekly + quarterly)
     for col in ["Total Uptime", "YTD uptime"]:
         if col in headers:
             idx = headers.index(col)
@@ -90,45 +100,30 @@ def read_sheet_exact(sheet_name):
         html += "</tr>"
 
     html += "</tbody></table>"
-
     return title, html, headers, rows
 
-# ----------------------------------
-# Downtime helper
-# ----------------------------------
-def downtime_to_minutes(txt):
-    if not txt:
-        return 0
-    mins = 0
-    if m := re.search(r'(\d+)\s*hr', txt.lower()):
-        mins += int(m.group(1)) * 60
-    if m := re.search(r'(\d+)\s*min', txt.lower()):
-        mins += int(m.group(1))
-    return mins
-
-# ----------------------------------
+# -------------------------------
 # Load sheets
-# ----------------------------------
+# -------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
 sheets = wb.sheetnames
 
-weekly_title, weekly_table, weekly_headers, weekly_rows = read_sheet_exact(sheets[0])
+weekly_title, weekly_table, weekly_headers, weekly_rows = read_sheet(sheets[0])
+quarterly_title = quarterly_table = ""
 
-quarterly_title = ""
-quarterly_table = ""
 if len(sheets) > 1:
-    quarterly_title, quarterly_table, _, _ = read_sheet_exact(sheets[1])
+    quarterly_title, quarterly_table, _, _ = read_sheet(sheets[1])
 
-# ----------------------------------
-# Major Incident (Weekly)
-# ----------------------------------
+# -------------------------------
+# Major Incident (ONLY outage downtime)
+# -------------------------------
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
-if "Outage Downtime" in weekly_headers and "Account Name" in weekly_headers:
+if "Outage Downtime" in weekly_headers:
     idx_out = weekly_headers.index("Outage Downtime")
     idx_acc = weekly_headers.index("Account Name")
-    idx_rca = weekly_headers.index("RCA of Outage") if "RCA of Outage" in weekly_headers else None
+    idx_rca = weekly_headers.index("RCA of Outage")
 
     max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_out]))
 
@@ -136,18 +131,17 @@ if "Outage Downtime" in weekly_headers and "Account Name" in weekly_headers:
         major_incident = {
             "account": max_row[idx_acc],
             "outage": max_row[idx_out],
-            "rca": max_row[idx_rca] if idx_rca is not None else ""
+            "rca": max_row[idx_rca]
         }
 
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
-            f"of <b>{major_incident['outage']}</b> during the week.<br>"
-            f"<b>RCA:</b> {major_incident['rca']}"
+            f"of <b>{major_incident['outage']}</b> during the week."
         )
 
-# ----------------------------------
+# -------------------------------
 # Render HTML
-# ----------------------------------
+# -------------------------------
 with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
     template = Template(f.read())
 
