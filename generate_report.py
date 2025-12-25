@@ -39,10 +39,8 @@ print(f"✅ Using Excel: {EXCEL_FILE}")
 def get_cell_display(cell):
     if cell.value is None:
         return ""
-
     if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
         return f"{cell.value * 100:.2f}%"
-
     return str(cell.value)
 
 def wrap_uptime(val):
@@ -56,19 +54,22 @@ def wrap_uptime(val):
 # ----------------------------------
 # Read sheet EXACT (title from A1)
 # ----------------------------------
-def read_sheet_exact(sheet):
+def read_sheet_exact(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb[sheet]
+    ws = wb[sheet_name]
 
     title = ws["A1"].value or ""
     headers = [c.value or "" for c in ws[2]]
 
-    # ❌ Remove column after RCA of Outage (if exists)
+    # ✅ HARD STOP AFTER "RCA of Outage"
+    end_idx = len(headers)
     if "RCA of Outage" in headers:
-        headers = headers[: headers.index("RCA of Outage") + 1]
+        end_idx = headers.index("RCA of Outage") + 1
+
+    headers = headers[:end_idx]
 
     rows = []
-    for r in ws.iter_rows(min_row=3, max_col=len(headers)):
+    for r in ws.iter_rows(min_row=3, max_col=end_idx):
         row = [get_cell_display(c) for c in r]
         if any(row):
             rows.append(row)
@@ -92,6 +93,7 @@ def read_sheet_exact(sheet):
         html += "</tr>"
 
     html += "</tbody></table>"
+
     return title, html, headers, rows
 
 # ----------------------------------
@@ -114,26 +116,36 @@ wb = load_workbook(EXCEL_FILE, data_only=True)
 sheets = wb.sheetnames
 
 weekly_title, weekly_table, weekly_headers, weekly_rows = read_sheet_exact(sheets[0])
-quarterly_title = quarterly_table = ""
 
+quarterly_title = ""
+quarterly_table = ""
 if len(sheets) > 1:
     quarterly_title, quarterly_table, _, _ = read_sheet_exact(sheets[1])
 
 # ----------------------------------
 # Major Incident (Weekly only)
+# ✅ BASED ONLY ON "Outage Downtime"
 # ----------------------------------
 major_incident = {"account": "", "outage": ""}
 major_story = ""
 
-if "Total Downtime(In Mins)" in weekly_headers:
-    idx_d = weekly_headers.index("Total Downtime(In Mins)")
-    idx_a = weekly_headers.index("Account Name")
+if "Outage Downtime" in weekly_headers and "Account Name" in weekly_headers:
+    idx_outage = weekly_headers.index("Outage Downtime")
+    idx_account = weekly_headers.index("Account Name")
 
-    max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_d]))
-    if downtime_to_minutes(max_row[idx_d]) > 0:
+    max_minutes = -1
+    max_row = None
+
+    for row in weekly_rows:
+        minutes = downtime_to_minutes(row[idx_outage])
+        if minutes > max_minutes:
+            max_minutes = minutes
+            max_row = row
+
+    if max_row and max_minutes > 0:
         major_incident = {
-            "account": max_row[idx_a],
-            "outage": max_row[idx_d]
+            "account": max_row[idx_account],
+            "outage": max_row[idx_outage]
         }
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
