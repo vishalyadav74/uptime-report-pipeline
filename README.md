@@ -175,3 +175,5 @@ Displays it in Major Incident of the Week section
 ✔ Use public HTTPS URL for images in emails
 
 ✔ Test locally before Jenkins run
+
+**Note: Convert this to Azure DevOps pipeline if you want this for your organization.**
