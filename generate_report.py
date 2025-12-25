@@ -61,7 +61,7 @@ def downtime_to_minutes(txt):
     return mins
 
 # ----------------------------------
-# Read sheet SAFE (no extra columns)
+# Read sheet (EMAIL SAFE)
 # ----------------------------------
 def read_sheet(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -73,7 +73,7 @@ def read_sheet(sheet_name):
     # 🔒 STOP strictly at RCA of Outage
     end_idx = len(raw_headers)
     for i, h in enumerate(raw_headers):
-        if h.strip().lower() == "rca of outage":
+        if h.lower() == "rca of outage":
             end_idx = i + 1
             break
 
@@ -92,14 +92,15 @@ def read_sheet(sheet_name):
             for r in rows:
                 r[idx] = wrap_uptime(r[idx])
 
-    # Build HTML table
-    html = "<table class='uptime-table'><thead><tr>"
+    # 🟢 BUILD EMAIL-SAFE TABLE (INLINE ROW COLORS)
+    html = "<table class='uptime-table' cellpadding='0' cellspacing='0'><thead><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr></thead><tbody>"
 
-    for r in rows:
-        html += "<tr>"
+    for i, r in enumerate(rows):
+        row_bg = "#ffffff" if i % 2 == 0 else "#f5f5f5"
+        html += f"<tr style='background:{row_bg};'>"
         for v in r:
             html += f"<td>{v}</td>"
         html += "</tr>"
@@ -126,8 +127,7 @@ if len(sheets) > 1:
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
 
-# Normalize headers for SAFE lookup
-norm_headers = [h.strip().lower() for h in weekly_headers]
+norm_headers = [h.lower() for h in weekly_headers]
 
 def idx(name):
     name = name.lower()
@@ -139,7 +139,6 @@ idx_rca = idx("rca of outage")
 
 if idx_out is not None and idx_acc is not None:
     max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_out]))
-
     if downtime_to_minutes(max_row[idx_out]) > 0:
         major_incident["account"] = max_row[idx_acc]
         major_incident["outage"] = max_row[idx_out]
