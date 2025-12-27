@@ -39,16 +39,36 @@ pipeline {
             }
         }
 
-        stage('Generate Report & Send Email') {
+        stage('Generate Report') {
             steps {
                 script {
-                    echo "🚀 Generating report and sending email via ITSM SMTP..."
+                    echo "🚀 Generating uptime report..."
+                    sh "./venv/bin/python generate_report.py"
+                }
+            }
+        }
 
-                    sh """
-                      ./venv/bin/python generate_report.py \
-                        --to "${params.MAIL_TO}" \
-                        --cc "${params.MAIL_CC}"
-                    """
+        stage('Send Email') {
+            steps {
+                script {
+                    def htmlReport = readFile 'output/uptime_report.html'
+
+                    // ✅ FIX: combine TO + CC safely
+                    def recipients = params.MAIL_TO
+                    if (params.MAIL_CC?.trim()) {
+                        recipients = recipients ? "${params.MAIL_TO},${params.MAIL_CC}" : params.MAIL_CC
+                    }
+
+                    emailext(
+                        subject: "SAAS Accounts Weekly & Quarterly Application Uptime Report",
+                        body: htmlReport,
+                        mimeType: 'text/html',
+                        to: recipients,
+                        from: 'incident@businessnext.com',
+                        replyTo: 'incident@businessnext.com'
+                    )
+
+                    echo "✅ Email sent to: ${recipients}"
                 }
             }
         }
