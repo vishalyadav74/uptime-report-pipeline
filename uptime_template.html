@@ -8,172 +8,130 @@
 body{
   font-family:Segoe UI,Arial,sans-serif;
   background:#f4f6f8;
-  padding:20px;
-}
-.container{
-  max-width:1200px;
-  background:#ffffff;
-  margin:auto;
-  border-radius:6px;
-  box-shadow:0 2px 10px rgba(0,0,0,.08);
-}
-
-/* GLOBAL SPACING */
-.block-gap{ margin-top:20px; }
-
-/* HEADER */
-.header{
-  background:#e01e7e;
-  color:#ffffff;
-  padding:20px 30px;
-}
-.header h1{margin:0;}
-.header p{margin-top:6px;font-size:14px;}
-
-/* INTRO */
-.intro{
-  padding:18px 30px;
-  background:#fafafa;
-  border-bottom:1px solid #e5e5e5;
-  line-height:1.6;
-}
-
-/* MAJOR INCIDENT */
-.cards{ padding:0 30px; }
-.card{
-  background:#fff3f6;
-  border-left:6px solid #e01e7e;
-  padding:15px 18px;
-  border-radius:6px;
-}
-.card h2{
-  margin:0 0 8px;
-  color:#e01e7e;
-  font-size:18px;
-}
-.card p{ font-size:13px; margin:6px 0; }
-
-/* SECTIONS */
-.section{ padding:0 30px; }
-.section-title{
-  background:#ececec;
-  padding:8px 12px;
-  font-weight:600;
-  margin-bottom:10px;
+  margin:0;
+  padding:0;
 }
 
 /* TABLE */
-table.uptime-table{
-  width:100%;
+.uptime-table{
+  width:700px;
   border-collapse:collapse;
-  font-size:13px;
+  table-layout:fixed;
+  font-size:12px;
 }
-table.uptime-table th{
+.uptime-table th{
   background:#e01e7e;
   color:#ffffff;
   padding:8px;
   border:1px solid #ddd;
 }
-table.uptime-table td{
+.uptime-table td{
   padding:8px;
   border:1px solid #ddd;
+  word-break:break-word;
+  white-space:normal;
 }
-
-/* ALTERNATE ROW COLORS */
-table.uptime-table tbody tr:nth-child(odd){ background:#ffffff; }
-table.uptime-table tbody tr:nth-child(even){ background:#f5f5f5; }
-
-/* FOOTER */
-.footer{
-  padding:20px 30px;
-  font-size:13px;
-  color:#333;
-}
-.footer p{ margin-bottom:10px; }
 </style>
 </head>
 
 <body>
-<div class="container">
+
+<!-- OUTER WRAPPER -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center">
+
+<!-- MAIN CONTAINER -->
+<table width="700" cellpadding="0" cellspacing="0" style="background:#ffffff;">
 
 <!-- HEADER -->
-<div class="header">
-  <h1>SaaS Accounts Application Uptime Report</h1>
-  <p>Weekly & Quarterly Availability Summary</p>
-</div>
+<tr>
+<td style="background:#e01e7e;color:#ffffff;padding:20px;">
+  <h1 style="margin:0;">SaaS Accounts Application Uptime Report</h1>
+  <p style="margin-top:6px;font-size:13px;">
+    Weekly & Quarterly Availability Summary
+  </p>
+</td>
+</tr>
 
 <!-- INTRO -->
-<div class="intro">
+<tr>
+<td style="padding:18px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all our SaaS accounts
-  along with the corresponding remarks and RCA stating the relevant justification
-  for any observed downtime.
-</div>
+  along with remarks and RCA for any observed downtime.
+</td>
+</tr>
 
 <!-- MAJOR INCIDENT -->
-<div class="cards block-gap">
-  <div class="card">
-    <h2>🚨 Major Incident of the Week</h2>
-    <p><b>Account:</b> {{ major_incident.account }}</p>
-    <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
-    {% if major_incident.rca %}
-    <p><b>RCA:</b> {{ major_incident.rca }}</p>
-    {% endif %}
-    <p>{{ major_story | safe }}</p>
-  </div>
-</div>
+<tr>
+<td style="padding:18px;">
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="background:#fff3f6;border-left:6px solid #e01e7e;">
+    <tr>
+      <td style="padding:14px;">
+        <h3 style="margin:0 0 8px;color:#e01e7e;">
+          🚨 Major Incident of the Week
+        </h3>
+        <p><b>Account:</b> {{ major_incident.account }}</p>
+        <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
+        {% if major_incident.rca %}
+        <p><b>RCA:</b> {{ major_incident.rca }}</p>
+        {% endif %}
+        <p>{{ major_story | safe }}</p>
+      </td>
+    </tr>
+  </table>
+</td>
+</tr>
 
 <!-- WEEKLY -->
-<div class="section block-gap">
-  <div class="section-title">{{ weekly_title }}</div>
+<tr>
+<td style="padding:18px;">
+  <div style="background:#ececec;padding:8px;font-weight:600;">
+    {{ weekly_title }}
+  </div>
   {{ weekly_table | safe }}
-</div>
+</td>
+</tr>
 
 <!-- QUARTERLY -->
 {% if quarterly_table %}
-<div class="section block-gap">
-  <div class="section-title">{{ quarterly_title }}</div>
+<tr>
+<td style="padding:18px;">
+  <div style="background:#ececec;padding:8px;font-weight:600;">
+    {{ quarterly_title }}
+  </div>
   {{ quarterly_table | safe }}
-</div>
+</td>
+</tr>
 {% endif %}
 
 <!-- FOOTER -->
-<div class="footer">
-  <p>
-    For any production related incident and support, contact
-    <a href="mailto:incident@businessnext.com"
-       style="color:#e01e7e;text-decoration:none;">
-      incident@businessnext.com
-    </a>
-  </p>
+<tr>
+<td style="padding:18px;font-size:12px;">
+  For any production related incident and support, contact
+  <a href="mailto:incident@businessnext.com"
+     style="color:#e01e7e;text-decoration:none;">
+    incident@businessnext.com
+  </a>
+  <br><br>
 
-  <!-- ✅ SPACER BEFORE FOOTER (THIS FIXES YOUR ISSUE) -->
-<div class="block-gap"></div>
-  
-  <p>
-    Best Regards,<br>
-    Atin Gambhir | Manager – ITSM (CDG)
-  </p>
+  Best Regards,<br>
+  Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <img
-    src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
-    alt="BusinessNext"
-    width="85"
-    style="display:block;border:0;"
-  >
+  <img src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
+       width="85" style="display:block;border:0;"><br>
 
-  <div style="margin-top:6px;">
-    <a href="https://www.businessnext.com"
-       style="color:#000;text-decoration:underline;">
-      www.businessnext.com
-    </a>
-  </div>
+  <a href="https://www.businessnext.com">www.businessnext.com</a><br>
+  <b style="color:#e01e7e;">#UpForTomorrow</b>
+</td>
+</tr>
 
-  <div style="margin-top:4px;font-weight:600;color:#e01e7e;">
-    #UpForTomorrow
-  </div>
-</div>
+</table>
+</td>
+</tr>
+</table>
 
-</div>
 </body>
 </html>
