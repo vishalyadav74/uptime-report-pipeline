@@ -5,48 +5,56 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-
-# ----------------------------------
-# CLI ARGUMENTS (TO / CC)
-# ----------------------------------
+# -------------------------------
+# ARGUMENTS
+# -------------------------------
 parser = argparse.ArgumentParser()
-parser.add_argument("--to", required=True, help="To email(s), comma separated")
-parser.add_argument("--cc", default="", help="CC email(s), comma separated")
+parser.add_argument("--to", required=True, help="To recipients (comma separated)")
+parser.add_argument("--cc", default="", help="CC recipients (comma separated)")
 args = parser.parse_args()
 
 MAIL_TO = args.to
 MAIL_CC = args.cc
 
-# ----------------------------------
-# Pick LATEST dated Excel file
-# ----------------------------------
+# -------------------------------
+# SMTP CONFIG (ITSM)
+# -------------------------------
+smtp_server = 'smtp.office365.com'
+smtp_port = 587
+smtp_user = 'incident@businessnext.com'
+smtp_password = 'btxnzsrnjgjfjpqf'
+from_email = 'incident@businessnext.com'
+
+# -------------------------------
+# PATHS
+# -------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+
+# -------------------------------
+# PICK LATEST EXCEL
+# -------------------------------
 def extract_date_from_filename(name):
     m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', name)
     if not m:
         return None
     try:
-        return datetime.strptime(
-            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
-        )
+        return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
     except:
         return None
 
 def find_excel():
     files = glob.glob("*.xlsx") + glob.glob("*.xls")
     dated = [(extract_date_from_filename(f), f) for f in files if extract_date_from_filename(f)]
-    if not dated:
-        raise Exception("❌ No valid dated Excel found")
     dated.sort(reverse=True)
     return dated[0][1]
 
 EXCEL_FILE = find_excel()
 print(f"✅ Using Excel: {EXCEL_FILE}")
 
-# ----------------------------------
-# Helpers
-# ----------------------------------
+# -------------------------------
+# HELPERS
+# -------------------------------
 def get_cell_display(cell):
     if cell.value is None:
         return ""
@@ -56,7 +64,7 @@ def get_cell_display(cell):
 
 def wrap_uptime(val):
     try:
-        num = float(val.replace("%", "").strip())
+        num = float(val.replace("%", ""))
         cls = "uptime-bad" if num < 99.95 else "uptime-good"
         return f'<span class="{cls}">{val}</span>'
     except:
@@ -65,45 +73,30 @@ def wrap_uptime(val):
 def downtime_to_minutes(txt):
     if not txt:
         return 0
-    txt = txt.lower()
     mins = 0
-    if m := re.search(r'(\d+)\s*hr', txt):
+    if m := re.search(r'(\d+)\s*hr', txt.lower()):
         mins += int(m.group(1)) * 60
-    if m := re.search(r'(\d+)\s*min', txt):
+    if m := re.search(r'(\d+)\s*min', txt.lower()):
         mins += int(m.group(1))
     return mins
 
-# ----------------------------------
-# Read sheet (EMAIL SAFE)
-# ----------------------------------
+# -------------------------------
+# READ SHEET
+# -------------------------------
 def read_sheet(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet_name]
 
     title = ws["A1"].value or ""
-    raw_headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
-
-    end_idx = len(raw_headers)
-    for i, h in enumerate(raw_headers):
-        if h.lower() == "rca of outage":
-            end_idx = i + 1
-            break
-
-    headers = raw_headers[:end_idx]
+    headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
 
     rows = []
-    for r in ws.iter_rows(min_row=3, max_col=end_idx):
+    for r in ws.iter_rows(min_row=3, max_col=len(headers)):
         row = [get_cell_display(c) for c in r]
         if any(row):
             rows.append(row)
 
-    for col in ["Total Uptime", "YTD uptime"]:
-        if col in headers:
-            idx = headers.index(col)
-            for r in rows:
-                r[idx] = wrap_uptime(r[idx])
-
-    html = "<table class='uptime-table' cellpadding='0' cellspacing='0'><thead><tr>"
+    html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr></thead><tbody>"
@@ -112,54 +105,26 @@ def read_sheet(sheet_name):
         bg = "#ffffff" if i % 2 == 0 else "#f5f5f5"
         html += f"<tr style='background:{bg};'>"
         for v in r:
-            html += f"<td>{v}</td>"
+            html += f"<td>{wrap_uptime(v)}</td>"
         html += "</tr>"
 
     html += "</tbody></table>"
-    return title, html, headers, rows
+    return title, html
 
-# ----------------------------------
-# Load sheets
-# ----------------------------------
+# -------------------------------
+# LOAD DATA
+# -------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
 sheets = wb.sheetnames
 
-weekly_title, weekly_table, weekly_headers, weekly_rows = read_sheet(sheets[0])
-
-quarterly_title = ""
-quarterly_table = ""
+weekly_title, weekly_table = read_sheet(sheets[0])
+quarterly_title, quarterly_table = ("", "")
 if len(sheets) > 1:
-    quarterly_title, quarterly_table, _, _ = read_sheet(sheets[1])
+    quarterly_title, quarterly_table = read_sheet(sheets[1])
 
-# ----------------------------------
-# Major Incident
-# ----------------------------------
-major_incident = {"account": "", "outage": "", "rca": ""}
-major_story = ""
-
-norm_headers = [h.lower() for h in weekly_headers]
-
-def idx(name):
-    return norm_headers.index(name) if name in norm_headers else None
-
-i_out = idx("outage downtime")
-i_acc = idx("account name")
-i_rca = idx("rca of outage")
-
-if i_out is not None and i_acc is not None:
-    max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[i_out]))
-    if downtime_to_minutes(max_row[i_out]) > 0:
-        major_incident["account"] = max_row[i_acc]
-        major_incident["outage"] = max_row[i_out]
-        major_incident["rca"] = max_row[i_rca] if i_rca is not None else ""
-        major_story = (
-            f"<b>{major_incident['account']}</b> experienced the highest outage "
-            f"of <b>{major_incident['outage']}</b> during the week."
-        )
-
-# ----------------------------------
-# Render HTML
-# ----------------------------------
+# -------------------------------
+# RENDER HTML
+# -------------------------------
 with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
     template = Template(f.read())
 
@@ -167,10 +132,7 @@ html_body = template.render(
     weekly_title=weekly_title,
     quarterly_title=quarterly_title,
     weekly_table=weekly_table,
-    quarterly_table=quarterly_table,
-    major_incident=major_incident,
-    major_story=major_story,
-    generated_date=time.strftime("%d-%b-%Y %H:%M")
+    quarterly_table=quarterly_table
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -180,28 +142,25 @@ with open(out, "w", encoding="utf-8") as f:
 
 print("✅ REPORT GENERATED:", out)
 
-# ----------------------------------
-# SMTP SEND EMAIL (ITSM)
-# ----------------------------------
-smtp_server = "smtp.office365.com"
-smtp_port = 587
-smtp_user = os.environ["SMTP_USER"]
-smtp_password = os.environ["SMTP_PASSWORD"]
-
-msg = MIMEMultipart("alternative")
-msg["Subject"] = "SAAS Accounts Weekly & Quarterly Application Uptime Report"
-msg["From"] = smtp_user
+# -------------------------------
+# SEND EMAIL (TO + CC PROPER)
+# -------------------------------
+msg = MIMEMultipart()
+msg["From"] = from_email
 msg["To"] = MAIL_TO
-if MAIL_CC:
-    msg["Cc"] = MAIL_CC
+msg["Cc"] = MAIL_CC
+msg["Subject"] = "SAAS Accounts Weekly & Quarterly Application Uptime Report"
 
 msg.attach(MIMEText(html_body, "html"))
 
-recipients = MAIL_TO.split(",") + (MAIL_CC.split(",") if MAIL_CC else [])
+to_list = [x.strip() for x in MAIL_TO.split(",") if x.strip()]
+cc_list = [x.strip() for x in MAIL_CC.split(",") if x.strip()]
+all_recipients = to_list + cc_list
 
-with smtplib.SMTP(smtp_server, smtp_port) as server:
-    server.starttls()
-    server.login(smtp_user, smtp_password)
-    server.sendmail(smtp_user, recipients, msg.as_string())
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.starttls()
+server.login(smtp_user, smtp_password)
+server.sendmail(from_email, all_recipients, msg.as_string())
+server.quit()
 
-print("📧 Email sent successfully")
+print(f"✅ Email sent | TO={to_list} | CC={cc_list}")
