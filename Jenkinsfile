@@ -2,15 +2,25 @@ pipeline {
     agent any
 
     parameters {
-        file(name: 'UPLOADED_EXCEL', description: 'Optional: Upload different Excel file')
+        string(
+            name: 'MAIL_TO',
+            defaultValue: 'incident@businessnext.com',
+            description: 'Primary recipient'
+        )
+
+        string(
+            name: 'MAIL_CC',
+            defaultValue: 'itsm@businessnext.com,ops@businessnext.com',
+            description: 'CC list (comma separated)'
+        )
     }
 
     environment {
         PYTHONUNBUFFERED = '1'
-        EMAIL_TO = 'yv741518@gmail.com'
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
@@ -25,12 +35,6 @@ pipeline {
                   python3 -m venv venv
                   ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
-                  
-                  echo "📁 Repository contents:"
-                  ls -la
-                  echo ""
-                  echo "🔍 Excel files found:"
-                  find . -name "*.xlsx" -o -name "*.xls" | head -10
                 '''
             }
         }
@@ -38,18 +42,12 @@ pipeline {
         stage('Generate Report') {
             steps {
                 script {
-                    echo "🚀 Starting automated report generation..."
-                    
+                    echo "🚀 Generating uptime report..."
+
                     if (params.UPLOADED_EXCEL) {
-                        echo "✅ Using uploaded file"
-                        sh """
-                            ./venv/bin/python generate_report.py "${params.UPLOADED_EXCEL}"
-                        """
+                        sh "./venv/bin/python generate_report.py '${params.UPLOADED_EXCEL}'"
                     } else {
-                        echo "📊 Auto-detecting Excel file from repository..."
-                        sh """
-                            ./venv/bin/python generate_report.py
-                        """
+                        sh "./venv/bin/python generate_report.py"
                     }
                 }
             }
@@ -59,21 +57,23 @@ pipeline {
             steps {
                 script {
                     def htmlReport = readFile 'output/uptime_report.html'
-                    
+
                     emailext(
-                        subject: "SAAS Accounts Weekly and Quarterly Application Uptime Report",
+                        subject: "SAAS Accounts Weekly & Quarterly Application Uptime Report",
                         body: htmlReport,
                         mimeType: 'text/html',
-                        to: env.EMAIL_TO,
-                        from: 'Jenkins <yv741518@gmail.com>',
-                        replyTo: 'yv741518@gmail.com'
+
+                        to: params.MAIL_TO,
+                        cc: params.MAIL_CC,
+
+                        from: 'incident@businessnext.com',
+                        replyTo: 'incident@businessnext.com'
                     )
-                    echo "✅ Email sent successfully"
                 }
             }
         }
 
-        stage('Archive') {
+        stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
             }
