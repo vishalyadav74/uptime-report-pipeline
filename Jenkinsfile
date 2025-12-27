@@ -4,14 +4,14 @@ pipeline {
     parameters {
         string(
             name: 'MAIL_TO',
-            defaultValue: 'incident@businessnext.com',
-            description: 'Primary recipient'
+            defaultValue: '',
+            description: 'Primary recipients (comma separated)'
         )
 
         string(
             name: 'MAIL_CC',
-            defaultValue: 'itsm@businessnext.com,ops@businessnext.com',
-            description: 'CC list (comma separated)'
+            defaultValue: '',
+            description: 'CC recipients (comma separated)'
         )
     }
 
@@ -43,12 +43,7 @@ pipeline {
             steps {
                 script {
                     echo "🚀 Generating uptime report..."
-
-                    if (params.UPLOADED_EXCEL) {
-                        sh "./venv/bin/python generate_report.py '${params.UPLOADED_EXCEL}'"
-                    } else {
-                        sh "./venv/bin/python generate_report.py"
-                    }
+                    sh "./venv/bin/python generate_report.py"
                 }
             }
         }
@@ -58,17 +53,27 @@ pipeline {
                 script {
                     def htmlReport = readFile 'output/uptime_report.html'
 
+                    // ✅ FIX: combine TO + CC safely
+                    def recipients = params.MAIL_TO
+                    if (params.MAIL_CC?.trim()) {
+                        recipients = recipients ?
+                            "${params.MAIL_TO},${params.MAIL_CC}" :
+                            params.MAIL_CC
+                    }
+
                     emailext(
                         subject: "SAAS Accounts Weekly & Quarterly Application Uptime Report",
                         body: htmlReport,
                         mimeType: 'text/html',
 
-                        to: params.MAIL_TO,
-                        cc: params.MAIL_CC,
+                        // 🔥 ONLY use `to`
+                        to: recipients,
 
                         from: 'incident@businessnext.com',
                         replyTo: 'incident@businessnext.com'
                     )
+
+                    echo "✅ Email sent to: ${recipients}"
                 }
             }
         }
