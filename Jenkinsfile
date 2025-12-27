@@ -17,9 +17,6 @@ pipeline {
 
     environment {
         PYTHONUNBUFFERED = '1'
-        SMTP_USER = 'incident@businessnext.com'
-        SMTP_SERVER = 'smtp.office365.com'
-        SMTP_PORT = '587'
     }
 
     stages {
@@ -44,12 +41,9 @@ pipeline {
 
         stage('Generate Report & Send Email') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'ITSM_SMTP_PASSWORD',
-                        variable: 'SMTP_PASSWORD'
-                    )
-                ]) {
+                script {
+                    echo "🚀 Generating report and sending email via ITSM SMTP..."
+
                     sh """
                       ./venv/bin/python generate_report.py \
                         --to "${params.MAIL_TO}" \
