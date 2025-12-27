@@ -7,6 +7,7 @@ pipeline {
             defaultValue: '',
             description: 'Primary recipients (comma separated)'
         )
+
         string(
             name: 'MAIL_CC',
             defaultValue: '',
@@ -40,22 +41,14 @@ pipeline {
 
         stage('Generate Report & Send Email') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'ITSM_SMTP',
-                        usernameVariable: 'SMTP_USER',
-                        passwordVariable: 'SMTP_PASSWORD'
-                    )
-                ]) {
-                    withEnv([
-                        "MAIL_TO=${params.MAIL_TO}",
-                        "MAIL_CC=${params.MAIL_CC}"
-                    ]) {
-                        sh '''
-                          echo "🚀 Generating report & sending email via ITSM SMTP"
-                          ./venv/bin/python generate_report.py
-                        '''
-                    }
+                script {
+                    echo "🚀 Generating report and sending email via ITSM SMTP..."
+
+                    sh """
+                      ./venv/bin/python generate_report.py \
+                        --to "${params.MAIL_TO}" \
+                        --cc "${params.MAIL_CC}"
+                    """
                 }
             }
         }
