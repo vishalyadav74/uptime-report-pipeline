@@ -6,12 +6,25 @@ pipeline {
         string(name: 'MAIL_CC', defaultValue: '', description: 'CC (comma separated)')
     }
 
+    environment {
+        PYTHONUNBUFFERED = '1'
+    }
+
     stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/vishalyadav74/uptime-report-pipeline.git'
+            }
+        }
 
         stage('Setup') {
             steps {
                 sh '''
+                  python3 --version
                   python3 -m venv venv
+                  ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
                 '''
             }
@@ -23,30 +36,31 @@ pipeline {
             }
         }
 
-        stage('Send Email') {
+        stage('Send Email (ITSM SMTP)') {
             steps {
-                withCredentials([
-                  usernamePassword(
-                    credentialsId: 'ITSM_SMTP',
-                    usernameVariable: 'SMTP_USER',
-                    passwordVariable: 'SMTP_PASSWORD'
-                  )
-                ]) {
-                    sh """
-                      ./venv/bin/python send.py \
-                        --subject "SAAS Accounts Weekly & Quarterly Application Uptime Report" \
-                        --to "${params.MAIL_TO}" \
-                        --cc "${params.MAIL_CC}" \
-                        --body output/uptime_report.html
-                    """
-                }
+                sh """
+                  ./venv/bin/python send.py \
+                    --subject "SAAS Accounts Weekly & Quarterly Application Uptime Report" \
+                    --to "${params.MAIL_TO}" \
+                    --cc "${params.MAIL_CC}" \
+                    --body output/uptime_report.html
+                """
             }
         }
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'output/uptime_report.html'
+                archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully'
+        }
+        failure {
+            echo '❌ Pipeline failed'
         }
     }
 }
