@@ -22,7 +22,8 @@ def extract_date_from_filename(name):
 
 def find_excel():
     files = glob.glob("*.xlsx") + glob.glob("*.xls")
-    dated = [(extract_date_from_filename(f), f) for f in files if extract_date_from_filename(f)]
+    dated = [(extract_date_from_filename(f), f)
+             for f in files if extract_date_from_filename(f)]
     if not dated:
         raise Exception("❌ No valid dated Excel found")
     dated.sort(reverse=True)
@@ -70,7 +71,6 @@ def read_sheet(sheet_name):
     title = ws["A1"].value or ""
     raw_headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
 
-    # 🔒 STOP strictly at RCA of Outage
     end_idx = len(raw_headers)
     for i, h in enumerate(raw_headers):
         if h.lower() == "rca of outage":
@@ -85,22 +85,20 @@ def read_sheet(sheet_name):
         if any(row):
             rows.append(row)
 
-    # 🎨 Color uptime columns
     for col in ["Total Uptime", "YTD uptime"]:
         if col in headers:
             idx = headers.index(col)
             for r in rows:
                 r[idx] = wrap_uptime(r[idx])
 
-    # 🟢 Build EMAIL SAFE table
-    html = "<table class='uptime-table' cellpadding='0' cellspacing='0'><thead><tr>"
+    html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr></thead><tbody>"
 
     for i, r in enumerate(rows):
-        row_bg = "#ffffff" if i % 2 == 0 else "#f5f5f5"
-        html += f"<tr style='background:{row_bg};'>"
+        bg = "#ffffff" if i % 2 == 0 else "#f5f5f5"
+        html += f"<tr style='background:{bg};'>"
         for v in r:
             html += f"<td>{v}</td>"
         html += "</tr>"
@@ -122,7 +120,7 @@ if len(sheets) > 1:
     quarterly_title, quarterly_table, _, _ = read_sheet(sheets[1])
 
 # ----------------------------------
-# Major Incident (ONLY Outage Downtime)
+# Major Incident
 # ----------------------------------
 major_incident = {"account": "", "outage": "", "rca": ""}
 major_story = ""
@@ -130,8 +128,7 @@ major_story = ""
 norm_headers = [h.lower() for h in weekly_headers]
 
 def idx(name):
-    name = name.lower()
-    return norm_headers.index(name) if name in norm_headers else None
+    return norm_headers.index(name.lower()) if name.lower() in norm_headers else None
 
 idx_out = idx("outage downtime")
 idx_acc = idx("account name")
@@ -142,7 +139,7 @@ if idx_out is not None and idx_acc is not None:
     if downtime_to_minutes(max_row[idx_out]) > 0:
         major_incident["account"] = max_row[idx_acc]
         major_incident["outage"] = max_row[idx_out]
-        major_incident["rca"] = max_row[idx_rca] if idx_rca is not None else ""
+        major_incident["rca"] = max_row[idx_rca] if idx_rca else ""
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
             f"of <b>{major_incident['outage']}</b> during the week."
