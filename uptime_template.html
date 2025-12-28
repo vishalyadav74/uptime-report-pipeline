@@ -11,8 +11,6 @@ body{
   margin:0;
   padding:0;
 }
-
-/* TABLE */
 .uptime-table{
   width:700px;
   border-collapse:collapse;
@@ -29,22 +27,18 @@ body{
   padding:8px;
   border:1px solid #ddd;
   word-break:break-word;
-  white-space:normal;
 }
 </style>
 </head>
 
 <body>
 
-<!-- OUTER WRAPPER -->
 <table width="100%" cellpadding="0" cellspacing="0">
 <tr>
 <td align="center">
 
-<!-- MAIN CONTAINER -->
 <table width="700" cellpadding="0" cellspacing="0" style="background:#ffffff;">
 
-<!-- HEADER -->
 <tr>
 <td style="background:#e01e7e;color:#ffffff;padding:20px;">
   <h1 style="margin:0;">SaaS Accounts Application Uptime Report</h1>
@@ -54,25 +48,21 @@ body{
 </td>
 </tr>
 
-<!-- INTRO -->
 <tr>
 <td style="padding:18px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
-  Please find below the <b>Application Uptime metrics</b> for all our SaaS accounts
+  Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
   along with remarks and RCA for any observed downtime.
 </td>
 </tr>
 
-<!-- MAJOR INCIDENT -->
 <tr>
 <td style="padding:18px;">
   <table width="100%" cellpadding="0" cellspacing="0"
          style="background:#fff3f6;border-left:6px solid #e01e7e;">
     <tr>
       <td style="padding:14px;">
-        <h3 style="margin:0 0 8px;color:#e01e7e;">
-          🚨 Major Incident of the Week
-        </h3>
+        <h3 style="margin:0 0 8px;color:#e01e7e;">🚨 Major Incident of the Week</h3>
         <p><b>Account:</b> {{ major_incident.account }}</p>
         <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
         {% if major_incident.rca %}
@@ -85,7 +75,6 @@ body{
 </td>
 </tr>
 
-<!-- WEEKLY -->
 <tr>
 <td style="padding:18px;">
   <div style="background:#ececec;padding:8px;font-weight:600;">
@@ -95,7 +84,6 @@ body{
 </td>
 </tr>
 
-<!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
 <td style="padding:18px;">
@@ -107,7 +95,6 @@ body{
 </tr>
 {% endif %}
 
-<!-- FOOTER -->
 <tr>
 <td style="padding:18px;font-size:12px;">
   For any production related incident and support, contact
@@ -120,8 +107,10 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <img src="https://raw.githubusercontent.com/vishalyadav74/uptime-report-pipeline/main/Businessnextlogo.png"
-       width="85" style="display:block;border:0;"><br>
+  <!-- ✅ INLINE CID LOGO -->
+  <img src="cid:businessnext_logo"
+       width="85"
+       style="display:block;border:0;outline:none;"><br>
 
   <a href="https://www.businessnext.com">www.businessnext.com</a><br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
