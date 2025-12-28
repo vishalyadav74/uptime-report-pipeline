@@ -2,38 +2,16 @@ pipeline {
     agent any
 
     parameters {
-        string(
-            name: 'MAIL_TO',
-            defaultValue: '',
-            description: 'Primary recipients (comma separated)'
-        )
-
-        string(
-            name: 'MAIL_CC',
-            defaultValue: '',
-            description: 'CC recipients (comma separated)'
-        )
-    }
-
-    environment {
-        PYTHONUNBUFFERED = '1'
+        string(name: 'MAIL_TO', defaultValue: '', description: 'To (comma separated)')
+        string(name: 'MAIL_CC', defaultValue: '', description: 'CC (comma separated)')
     }
 
     stages {
 
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/vishalyadav74/uptime-report-pipeline.git'
-            }
-        }
-
-        stage('Setup Environment') {
+        stage('Setup') {
             steps {
                 sh '''
-                  python3 --version
                   python3 -m venv venv
-                  ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
                 '''
             }
@@ -41,51 +19,34 @@ pipeline {
 
         stage('Generate Report') {
             steps {
-                script {
-                    echo "🚀 Generating uptime report..."
-                    sh "./venv/bin/python generate_report.py"
-                }
+                sh "./venv/bin/python generate_report.py"
             }
         }
 
         stage('Send Email') {
             steps {
-                script {
-                    def htmlReport = readFile 'output/uptime_report.html'
-
-                    // ✅ FIX: combine TO + CC safely
-                    def recipients = params.MAIL_TO
-                    if (params.MAIL_CC?.trim()) {
-                        recipients = recipients ? "${params.MAIL_TO},${params.MAIL_CC}" : params.MAIL_CC
-                    }
-
-                    emailext(
-                        subject: "SAAS Accounts Weekly & Quarterly Application Uptime Report",
-                        body: htmlReport,
-                        mimeType: 'text/html',
-                        to: recipients,
-                        from: 'incident@businessnext.com',
-                        replyTo: 'incident@businessnext.com'
-                    )
-
-                    echo "✅ Email sent to: ${recipients}"
+                withCredentials([
+                  usernamePassword(
+                    credentialsId: 'ITSM_SMTP',
+                    usernameVariable: 'SMTP_USER',
+                    passwordVariable: 'SMTP_PASSWORD'
+                  )
+                ]) {
+                    sh """
+                      ./venv/bin/python send.py \
+                        --subject "SAAS Accounts Weekly & Quarterly Application Uptime Report" \
+                        --to "${params.MAIL_TO}" \
+                        --cc "${params.MAIL_CC}" \
+                        --body output/uptime_report.html
+                    """
                 }
             }
         }
 
-        stage('Archive Report') {
+        stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
+                archiveArtifacts artifacts: 'output/uptime_report.html'
             }
-        }
-    }
-
-    post {
-        success {
-            echo '✅ Pipeline completed successfully'
-        }
-        failure {
-            echo '❌ Pipeline failed'
         }
     }
 }
