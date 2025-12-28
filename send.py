@@ -1,18 +1,14 @@
-import smtplib, argparse, os
+import smtplib, argparse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 
 def send_email(subject, body_html, to_list, cc_list):
     smtp_server = 'smtp.office365.com'
     smtp_port = 587
     smtp_user = 'incident@businessnext.com'
-    smtp_password = os.environ.get('SMTP_PASSWORD')
+    smtp_password = 'btxnzsrnjgjfjpqf'   # 🔥 DIRECT PASSWORD (as asked)
 
-    if not smtp_password:
-        raise Exception("SMTP_PASSWORD not set")
-
-    msg = MIMEMultipart('related')
+    msg = MIMEMultipart('alternative')
     msg['From'] = smtp_user
     msg['To'] = ', '.join(to_list)
     msg['Cc'] = ', '.join(cc_list)
@@ -28,7 +24,7 @@ def send_email(subject, body_html, to_list, cc_list):
     server.sendmail(smtp_user, recipients, msg.as_string())
     server.quit()
 
-    print("✅ Email sent successfully")
+    print("✅ Email sent successfully via ITSM SMTP")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument('--body', required=True)
     args = parser.parse_args()
 
-    with open(args.body, encoding='utf-8') as f:
+    with open(args.body, encoding="utf-8") as f:
         body = f.read()
 
     send_email(
