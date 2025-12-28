@@ -11,8 +11,10 @@ body{
   margin:0;
   padding:0;
 }
+
+/* TABLE */
 .uptime-table{
-  width:700px;
+  width:100%;
   border-collapse:collapse;
   table-layout:fixed;
   font-size:12px;
@@ -27,27 +29,35 @@ body{
   padding:8px;
   border:1px solid #ddd;
   word-break:break-word;
+  white-space:normal;
 }
 </style>
 </head>
 
 <body>
 
-<table width="100%" cellpadding="0" cellspacing="0">
+<!-- FULL WIDTH WRAPPER -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
 <tr>
 <td align="center">
 
-<table width="700" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+<!-- RESPONSIVE CONTAINER -->
+<table width="100%" cellpadding="0" cellspacing="0"
+       style="max-width:700px;background:#ffffff;margin:0 auto;">
 
+<!-- HEADER -->
 <tr>
 <td style="background:#e01e7e;color:#ffffff;padding:20px;">
-  <h1 style="margin:0;">SaaS Accounts Application Uptime Report</h1>
+  <h1 style="margin:0;font-size:20px;">
+    SaaS Accounts Application Uptime Report
+  </h1>
   <p style="margin-top:6px;font-size:13px;">
     Weekly & Quarterly Availability Summary
   </p>
 </td>
 </tr>
 
+<!-- INTRO -->
 <tr>
 <td style="padding:18px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
@@ -56,13 +66,16 @@ body{
 </td>
 </tr>
 
+<!-- MAJOR INCIDENT -->
 <tr>
 <td style="padding:18px;">
   <table width="100%" cellpadding="0" cellspacing="0"
          style="background:#fff3f6;border-left:6px solid #e01e7e;">
     <tr>
       <td style="padding:14px;">
-        <h3 style="margin:0 0 8px;color:#e01e7e;">🚨 Major Incident of the Week</h3>
+        <h3 style="margin:0 0 8px;color:#e01e7e;font-size:15px;">
+          🚨 Major Incident of the Week
+        </h3>
         <p><b>Account:</b> {{ major_incident.account }}</p>
         <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
         {% if major_incident.rca %}
@@ -75,6 +88,7 @@ body{
 </td>
 </tr>
 
+<!-- WEEKLY -->
 <tr>
 <td style="padding:18px;">
   <div style="background:#ececec;padding:8px;font-weight:600;">
@@ -84,6 +98,7 @@ body{
 </td>
 </tr>
 
+<!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
 <td style="padding:18px;">
@@ -95,6 +110,7 @@ body{
 </tr>
 {% endif %}
 
+<!-- FOOTER -->
 <tr>
 <td style="padding:18px;font-size:12px;">
   For any production related incident and support, contact
@@ -107,10 +123,10 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <!-- ✅ INLINE CID LOGO -->
+  <!-- INLINE LOGO -->
   <img src="cid:businessnext_logo"
        width="85"
-       style="display:block;border:0;outline:none;"><br>
+       style="display:block;border:0;"><br>
 
   <a href="https://www.businessnext.com">www.businessnext.com</a><br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
