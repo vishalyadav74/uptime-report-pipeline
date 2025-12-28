@@ -1,17 +1,16 @@
-import smtplib
-import argparse
-import os
+import smtplib, argparse, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
-
 def send_email(subject, body_html, to_list, cc_list):
-    # 🔒 SMTP CONFIG (same as you gave)
     smtp_server = 'smtp.office365.com'
     smtp_port = 587
     smtp_user = 'incident@businessnext.com'
-    smtp_password = 'btxnzsrnjgjfjpqf'
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+
+    if not smtp_password:
+        raise Exception("SMTP_PASSWORD not set")
 
     msg = MIMEMultipart('related')
     msg['From'] = smtp_user
@@ -19,17 +18,7 @@ def send_email(subject, body_html, to_list, cc_list):
     msg['Cc'] = ', '.join(cc_list)
     msg['Subject'] = subject
 
-    # HTML BODY
     msg.attach(MIMEText(body_html, 'html'))
-
-    # OPTIONAL INLINE LOGO (agar file ho to)
-    logo_path = 'logo-fixed'
-    if os.path.exists(logo_path):
-        with open(logo_path, 'rb') as f:
-            img = MIMEImage(f.read())
-            img.add_header('Content-ID', '<logo-fixed>')
-            img.add_header('Content-Disposition', 'inline', filename='logo.png')
-            msg.attach(img)
 
     recipients = to_list + cc_list
 
@@ -39,8 +28,7 @@ def send_email(subject, body_html, to_list, cc_list):
     server.sendmail(smtp_user, recipients, msg.as_string())
     server.quit()
 
-    print("✅ Mail sent successfully")
-
+    print("✅ Email sent successfully")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
