@@ -12,12 +12,12 @@ body{
   padding:0;
 }
 
-/* TABLE – OUTLOOK SAFE */
+/* ===== TABLE – OUTLOOK + ZOOM SAFE ===== */
 .uptime-table{
   width:100%;
   max-width:100%;
   border-collapse:collapse;
-  table-layout:fixed;
+  table-layout:fixed;              /* ✅ FIX */
   font-size:12px;
 }
 .uptime-table th{
@@ -25,12 +25,20 @@ body{
   color:#ffffff;
   padding:8px;
   border:1px solid #ddd;
+  word-break:break-word;
 }
 .uptime-table td{
   padding:8px;
   border:1px solid #ddd;
   word-break:break-word;
   white-space:normal;
+}
+
+/* ===== MOBILE / ZOOM FALLBACK ===== */
+@media only screen and (max-width:900px){
+  .table-wrapper{
+    overflow-x:auto;
+  }
 }
 </style>
 </head>
@@ -95,7 +103,9 @@ body{
   <div style="background:#ececec;padding:8px;font-weight:600;">
     {{ weekly_title }}
   </div>
-  {{ weekly_table | safe }}
+  <div class="table-wrapper">
+    {{ weekly_table | safe }}
+  </div>
 </td>
 </tr>
 
@@ -106,7 +116,9 @@ body{
   <div style="background:#ececec;padding:8px;font-weight:600;">
     {{ quarterly_title }}
   </div>
-  {{ quarterly_table | safe }}
+  <div class="table-wrapper">
+    {{ quarterly_table | safe }}
+  </div>
 </td>
 </tr>
 {% endif %}
