@@ -12,12 +12,11 @@ body{
   padding:0;
 }
 
-/* ===== TABLE – OUTLOOK + ZOOM SAFE ===== */
 .uptime-table{
   width:100%;
   max-width:100%;
   border-collapse:collapse;
-  table-layout:fixed;              /* ✅ FIX */
+  table-layout:fixed;            
   font-size:12px;
 }
 .uptime-table th{
@@ -34,7 +33,6 @@ body{
   white-space:normal;
 }
 
-/* ===== MOBILE / ZOOM FALLBACK ===== */
 @media only screen and (max-width:900px){
   .table-wrapper{
     overflow-x:auto;
@@ -45,16 +43,13 @@ body{
 
 <body style="margin:0;padding:0;background:#f4f6f8;">
 
-<!-- FULL WIDTH OUTER WRAPPER -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
 <tr>
 <td align="center">
 
-<!-- MAIN RESPONSIVE CONTAINER -->
 <table width="100%" cellpadding="0" cellspacing="0"
        style="max-width:700px;width:100%;background:#ffffff;margin:0 auto;">
 
-<!-- HEADER -->
 <tr>
 <td style="background:#e01e7e;color:#ffffff;padding:20px;">
   <h1 style="margin:0;font-size:20px;">
@@ -66,7 +61,6 @@ body{
 </td>
 </tr>
 
-<!-- INTRO -->
 <tr>
 <td style="padding:18px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
@@ -75,7 +69,6 @@ body{
 </td>
 </tr>
 
-<!-- MAJOR INCIDENT -->
 <tr>
 <td style="padding:18px;">
   <table width="100%" cellpadding="0" cellspacing="0"
@@ -97,7 +90,6 @@ body{
 </td>
 </tr>
 
-<!-- WEEKLY -->
 <tr>
 <td style="padding:18px;">
   <div style="background:#ececec;padding:8px;font-weight:600;">
@@ -109,7 +101,6 @@ body{
 </td>
 </tr>
 
-<!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
 <td style="padding:18px;">
@@ -123,7 +114,6 @@ body{
 </tr>
 {% endif %}
 
-<!-- FOOTER -->
 <tr>
 <td style="padding:18px;font-size:12px;">
   For any production related incident and support, contact
@@ -136,7 +126,6 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <!-- INLINE CID LOGO -->
   <img src="cid:businessnext_logo"
        width="85"
        style="display:block;border:0;max-width:100%;"><br>
