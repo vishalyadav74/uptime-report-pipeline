@@ -8,7 +8,7 @@ def send_email(subject, body_html, to_list, cc_list):
     smtp_server = 'smtp.office365.com'
     smtp_port = 587
     smtp_user = 'incident@businessnext.com'
-    smtp_password = 'btxnzsrnjgjfjpqf'   # 🔴 direct password as you asked
+    smtp_password = 'btxnzsrnjgjfjpqf'  
 
     msg = MIMEMultipart('related')
     msg['From'] = smtp_user
@@ -18,7 +18,6 @@ def send_email(subject, body_html, to_list, cc_list):
 
     msg.attach(MIMEText(body_html, 'html'))
 
-    # ✅ INLINE LOGO (CID)
     with open('logo-fixed.png', 'rb') as f:
         img = MIMEImage(f.read())
         img.add_header('Content-ID', '<businessnext_logo>')
