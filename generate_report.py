@@ -62,7 +62,7 @@ def downtime_to_minutes(txt):
     return mins
 
 # ----------------------------------
-# Read sheet (EMAIL SAFE)
+# Read sheet (OUTLOOK SAFE)
 # ----------------------------------
 def read_sheet(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -91,7 +91,21 @@ def read_sheet(sheet_name):
             for r in rows:
                 r[idx] = wrap_uptime(r[idx])
 
-    html = "<table class='uptime-table'><thead><tr>"
+    # ✅ OUTLOOK SAFE TABLE (COLGROUP CONTROLS WIDTH)
+    html = """
+    <table class="uptime-table" cellpadding="0" cellspacing="0">
+      <colgroup>
+        <col style="width:10%">
+        <col style="width:9%">
+        <col style="width:10%">
+        <col style="width:9%">
+        <col style="width:10%">
+        <col style="width:22%">  <!-- Remarks -->
+        <col style="width:30%">  <!-- RCA -->
+      </colgroup>
+      <thead><tr>
+    """
+
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr></thead><tbody>"
@@ -139,7 +153,7 @@ if idx_out is not None and idx_acc is not None:
     if downtime_to_minutes(max_row[idx_out]) > 0:
         major_incident["account"] = max_row[idx_acc]
         major_incident["outage"] = max_row[idx_out]
-        major_incident["rca"] = max_row[idx_rca] if idx_rca else ""
+        major_incident["rca"] = max_row[idx_rca] if idx_rca is not None else ""
         major_story = (
             f"<b>{major_incident['account']}</b> experienced the highest outage "
             f"of <b>{major_incident['outage']}</b> during the week."
