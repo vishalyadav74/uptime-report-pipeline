@@ -40,16 +40,17 @@ body{
 
 <body>
 
+<!-- FULL WIDTH OUTER -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
 <tr>
-<td align="center">
+<td>
 
-<table width="100%" cellpadding="0" cellspacing="0"
-       style="max-width:700px;background:#ffffff;margin:0 auto;">
+<!-- FULL WIDTH CONTAINER (NO max-width) -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
 
 <!-- HEADER -->
 <tr>
-<td style="background:#e01e7e;color:#ffffff;padding:20px;">
+<td style="background:#e01e7e;color:#ffffff;padding:22px 26px;">
   <h1 style="margin:0;font-size:20px;">
     SaaS Accounts Application Uptime Report
   </h1>
@@ -61,7 +62,7 @@ body{
 
 <!-- INTRO -->
 <tr>
-<td style="padding:18px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
+<td style="padding:18px 26px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
   along with remarks and RCA for any observed downtime.
@@ -70,11 +71,11 @@ body{
 
 <!-- MAJOR INCIDENT -->
 <tr>
-<td style="padding:18px;">
+<td style="padding:18px 26px;">
   <table width="100%" cellpadding="0" cellspacing="0"
          style="background:#fff3f6;border-left:6px solid #e01e7e;">
     <tr>
-      <td style="padding:14px;">
+      <td style="padding:14px 16px;">
         <h3 style="margin:0 0 8px;color:#e01e7e;font-size:15px;">
           🚨 Major Incident of the Week
         </h3>
@@ -92,8 +93,8 @@ body{
 
 <!-- WEEKLY -->
 <tr>
-<td style="padding:18px;">
-  <div style="background:#ececec;padding:8px;font-weight:600;">
+<td style="padding:18px 26px;">
+  <div style="background:#ececec;padding:8px 10px;font-weight:600;">
     {{ weekly_title }}
   </div>
   {{ weekly_table | safe }}
@@ -103,8 +104,8 @@ body{
 <!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
-<td style="padding:18px;">
-  <div style="background:#ececec;padding:8px;font-weight:600;">
+<td style="padding:18px 26px;">
+  <div style="background:#ececec;padding:8px 10px;font-weight:600;">
     {{ quarterly_title }}
   </div>
   {{ quarterly_table | safe }}
@@ -114,7 +115,7 @@ body{
 
 <!-- FOOTER -->
 <tr>
-<td style="padding:18px;font-size:12px;">
+<td style="padding:18px 26px;font-size:12px;">
   For any production related incident and support, contact
   <a href="mailto:incident@businessnext.com"
      style="color:#e01e7e;text-decoration:none;">
@@ -125,7 +126,7 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <img src="cid:businessnext_logo" width="85" style="display:block;"><br>
+  <img src="cid:businessnext_logo" width="85" style="display:block;border:0;"><br>
 
   <a href="https://www.businessnext.com">www.businessnext.com</a><br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
