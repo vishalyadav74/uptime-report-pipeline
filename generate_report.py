@@ -100,8 +100,8 @@ def read_sheet(sheet_name):
         <col style="width:10%">
         <col style="width:9%">
         <col style="width:10%">
-        <col style="width:50%">  <!-- Remarks -->
-        <col style="width:50%">  <!-- RCA -->
+        <col style="width:22%">  <!-- Remarks -->
+        <col style="width:30%">  <!-- RCA -->
       </colgroup>
       <thead><tr>
     """
