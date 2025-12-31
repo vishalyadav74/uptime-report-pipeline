@@ -6,13 +6,13 @@
 
 <style>
 body{
-  font-family:Segoe UI,Arial,sans-serif;
+  font-family:Segoe UI, Arial, sans-serif;
   background:#f4f6f8;
   margin:0;
   padding:0;
 }
 
-/* ===== TABLE ===== */
+/* ===== MAIN TABLE ===== */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
@@ -22,39 +22,70 @@ body{
 .uptime-table th{
   background:#e01e7e;
   color:#ffffff;
-  padding:8px;
+  padding:10px;
   border:1px solid #ddd;
   text-align:left;
 }
 
 .uptime-table td{
-  padding:8px;
-  border:1px solid #ddd;
+  padding:9px 10px;
+  border:1px solid #e5e5e5;
   vertical-align:top;
-  white-space:normal;
-  word-break:normal;
-  line-height:1.55;
+  line-height:1.6;
+}
+
+/* Zebra rows */
+.uptime-table tbody tr:nth-child(even){
+  background:#fafafa;
+}
+
+/* Improve Remarks + RCA readability */
+.uptime-table td:last-child,
+.uptime-table td:nth-last-child(2){
+  font-size:12.5px;
+}
+
+/* ===== SECTION TITLE ===== */
+.section-title{
+  background:#f1f1f1;
+  padding:10px 12px;
+  font-weight:600;
+  border-left:6px solid #e01e7e;
+  margin-bottom:6px;
+}
+
+/* ===== INCIDENT CARD ===== */
+.incident-card{
+  background:#fff3f6;
+  border-left:6px solid #e01e7e;
+  padding:16px;
+}
+
+.incident-card h3{
+  margin:0 0 10px;
+  color:#e01e7e;
+  font-size:15px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- FULL WIDTH OUTER -->
+<!-- FULL WIDTH BACKGROUND -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
 <tr>
 <td>
 
-<!-- FULL WIDTH CONTAINER (NO max-width) -->
+<!-- FULL WIDTH CONTENT (NO MAX WIDTH) -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
 
 <!-- HEADER -->
 <tr>
-<td style="background:#e01e7e;color:#ffffff;padding:22px 26px;">
-  <h1 style="margin:0;font-size:20px;">
+<td style="background:#e01e7e;color:#ffffff;padding:26px 32px;">
+  <h1 style="margin:0;font-size:22px;font-weight:600;">
     SaaS Accounts Application Uptime Report
   </h1>
-  <p style="margin-top:6px;font-size:13px;">
+  <p style="margin-top:6px;font-size:13px;opacity:.95;">
     Weekly & Quarterly Availability Summary
   </p>
 </td>
@@ -62,7 +93,7 @@ body{
 
 <!-- INTRO -->
 <tr>
-<td style="padding:18px 26px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
+<td style="padding:20px 32px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
   along with remarks and RCA for any observed downtime.
@@ -71,14 +102,11 @@ body{
 
 <!-- MAJOR INCIDENT -->
 <tr>
-<td style="padding:18px 26px;">
-  <table width="100%" cellpadding="0" cellspacing="0"
-         style="background:#fff3f6;border-left:6px solid #e01e7e;">
+<td style="padding:20px 32px;">
+  <table width="100%" cellpadding="0" cellspacing="0" class="incident-card">
     <tr>
-      <td style="padding:14px 16px;">
-        <h3 style="margin:0 0 8px;color:#e01e7e;font-size:15px;">
-          🚨 Major Incident of the Week
-        </h3>
+      <td>
+        <h3>🚨 Major Incident of the Week</h3>
         <p><b>Account:</b> {{ major_incident.account }}</p>
         <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
         {% if major_incident.rca %}
@@ -93,8 +121,8 @@ body{
 
 <!-- WEEKLY -->
 <tr>
-<td style="padding:18px 26px;">
-  <div style="background:#ececec;padding:8px 10px;font-weight:600;">
+<td style="padding:20px 32px;">
+  <div class="section-title">
     {{ weekly_title }}
   </div>
   {{ weekly_table | safe }}
@@ -104,8 +132,8 @@ body{
 <!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
-<td style="padding:18px 26px;">
-  <div style="background:#ececec;padding:8px 10px;font-weight:600;">
+<td style="padding:20px 32px;">
+  <div class="section-title">
     {{ quarterly_title }}
   </div>
   {{ quarterly_table | safe }}
@@ -115,7 +143,7 @@ body{
 
 <!-- FOOTER -->
 <tr>
-<td style="padding:18px 26px;font-size:12px;">
+<td style="padding:22px 32px;font-size:12px;border-top:1px solid #e5e5e5;">
   For any production related incident and support, contact
   <a href="mailto:incident@businessnext.com"
      style="color:#e01e7e;text-decoration:none;">
@@ -126,7 +154,9 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <img src="cid:businessnext_logo" width="85" style="display:block;border:0;"><br>
+  <img src="cid:businessnext_logo"
+       width="90"
+       style="display:block;border:0;"><br>
 
   <a href="https://www.businessnext.com">www.businessnext.com</a><br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
