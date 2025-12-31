@@ -12,11 +12,10 @@ body{
   padding:0;
 }
 
-/* ===== TABLE BASE ===== */
+/* ===== TABLE ===== */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
-  table-layout:fixed;
   font-size:12px;
 }
 
@@ -32,34 +31,9 @@ body{
   padding:8px;
   border:1px solid #ddd;
   vertical-align:top;
-  word-break:break-word;
   white-space:normal;
-  line-height:1.45;
-}
-
-/* ===== COLUMN WIDTH FIX (IMPORTANT) ===== */
-/* Generic columns */
-.uptime-table th,
-.uptime-table td{
-  width:auto;
-}
-
-/* Remarks column */
-.uptime-table th:nth-last-child(2),
-.uptime-table td:nth-last-child(2){
-  width:28%;
-}
-
-/* RCA of Outage column */
-.uptime-table th:last-child,
-.uptime-table td:last-child{
-  width:32%;
-}
-
-/* Make text readable */
-.uptime-table td:last-child,
-.uptime-table td:nth-last-child(2){
-  font-size:12.5px;
+  word-break:normal;
+  line-height:1.55;
 }
 </style>
 </head>
@@ -151,9 +125,7 @@ body{
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br><br>
 
-  <img src="cid:businessnext_logo"
-       width="85"
-       style="display:block;border:0;"><br>
+  <img src="cid:businessnext_logo" width="85" style="display:block;"><br>
 
   <a href="https://www.businessnext.com">www.businessnext.com</a><br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
