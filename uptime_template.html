@@ -27,14 +27,12 @@ body{
   padding:10px;
   border:1px solid #ddd;
   text-align:left;
-  font-size:13px;
 }
 
 .uptime-table td{
   padding:9px 10px;
   border:1px solid #e5e5e5;
   vertical-align:top;
-  font-size:13px;
 }
 
 .uptime-table tbody tr:nth-child(even){
@@ -48,7 +46,6 @@ body{
   font-weight:600;
   border-left:6px solid #e01e7e;
   margin-bottom:6px;
-  font-size:13px;
 }
 
 /* ===== INCIDENT CARD ===== */
@@ -56,13 +53,24 @@ body{
   background:#fff3f6;
   border-left:6px solid #e01e7e;
   padding:16px;
-  font-size:13px;
 }
 
 .incident-card h3{
   margin:0 0 8px 0;
   color:#e01e7e;
   font-size:14px;
+}
+
+/* ===== KPI CARD ===== */
+.kpi-card{
+  background:#f8fafc;
+  padding:14px;
+  border-radius:6px;
+  text-align:center;
+}
+.kpi-value{
+  font-size:18px;
+  font-weight:600;
 }
 </style>
 </head>
@@ -81,7 +89,7 @@ body{
   <div style="font-size:18px;font-weight:600;">
     SaaS Accounts Application Uptime Report
   </div>
-  <div style="margin-top:4px;font-size:13px;">
+  <div style="margin-top:4px;">
     Weekly & Quarterly Availability Summary
   </div>
 </td>
@@ -93,6 +101,39 @@ body{
   Hi All,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
   along with remarks and RCA for any observed downtime.
+</td>
+</tr>
+
+<!-- KPI SUMMARY -->
+<tr>
+<td style="padding:20px 32px;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td width="25%" class="kpi-card">
+        <div class="kpi-value" style="color:#16a34a;">{{ overall_uptime }}</div>
+        Overall Uptime
+      </td>
+      <td width="25%" class="kpi-card">
+        <div class="kpi-value" style="color:#dc2626;">{{ outage_count }}</div>
+        Outages
+      </td>
+      <td width="25%" class="kpi-card">
+        <div class="kpi-value" style="color:#ea580c;">{{ total_downtime }} mins</div>
+        Total Downtime
+      </td>
+      <td width="25%" class="kpi-card">
+        <div class="kpi-value" style="color:#7c3aed;">{{ most_affected }}</div>
+        Most Affected Account
+      </td>
+    </tr>
+  </table>
+</td>
+</tr>
+
+<!-- CHART -->
+<tr>
+<td style="padding:10px 32px;text-align:center;">
+  <img src="cid:downtime_chart" width="260" style="display:inline-block;">
 </td>
 </tr>
 
@@ -135,7 +176,7 @@ body{
 
 <!-- FOOTER / SIGNATURE -->
 <tr>
-<td style="padding:18px 32px;border-top:1px solid #e5e5e5;font-size:13px;line-height:1.6;">
+<td style="padding:18px 32px;border-top:1px solid #e5e5e5;">
   For any concern over above data, contact
   <a href="mailto:incident@businessnext.com" style="color:#e01e7e;text-decoration:none;">
     incident@businessnext.com
