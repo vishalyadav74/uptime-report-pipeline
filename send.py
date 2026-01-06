@@ -1,4 +1,4 @@
-import smtplib, argparse
+import smtplib, argparse, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -16,13 +16,24 @@ def send_email(subject, body_html, to_list, cc_list):
     msg['Cc'] = ', '.join(cc_list)
     msg['Subject'] = subject
 
+    # HTML body
     msg.attach(MIMEText(body_html, 'html'))
 
+    # --- Logo ---
     with open('logo-fixed.png', 'rb') as f:
         img = MIMEImage(f.read())
         img.add_header('Content-ID', '<businessnext_logo>')
         img.add_header('Content-Disposition', 'inline', filename='logo-fixed.png')
         msg.attach(img)
+
+    # --- Downtime chart (if exists) ---
+    chart_path = os.path.join('output', 'downtime_chart.png')
+    if os.path.exists(chart_path):
+        with open(chart_path, 'rb') as f:
+            chart = MIMEImage(f.read())
+            chart.add_header('Content-ID', '<downtime_chart>')
+            chart.add_header('Content-Disposition', 'inline', filename='downtime_chart.png')
+            msg.attach(chart)
 
     recipients = to_list + cc_list
 
@@ -31,6 +42,8 @@ def send_email(subject, body_html, to_list, cc_list):
     server.login(smtp_user, smtp_password)
     server.sendmail(smtp_user, recipients, msg.as_string())
     server.quit()
+
+    print("✅ Email sent successfully")
 
 
 if __name__ == "__main__":
