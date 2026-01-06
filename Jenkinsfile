@@ -14,6 +14,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                cleanWs()
                 git branch: 'main',
                     url: 'https://github.com/vishalyadav74/uptime-report-pipeline.git'
             }
@@ -53,15 +54,12 @@ pipeline {
                 """
             }
         }
-
-        stage('Archive') {
-            steps {
-                archiveArtifacts artifacts: 'output/*', fingerprint: true
-            }
-        }
     }
 
     post {
+        always {
+            archiveArtifacts artifacts: 'output/*', fingerprint: true
+        }
         success {
             echo '✅ Pipeline completed successfully'
         }
