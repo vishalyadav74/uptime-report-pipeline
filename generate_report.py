@@ -4,34 +4,45 @@ import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
+# -------------------------------------------------
+# PATHS
+# -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ---------------- PICK LATEST EXCEL ----------------
+# -------------------------------------------------
+# PICK LATEST DATED EXCEL
+# -------------------------------------------------
 def extract_date(name):
-    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)\s*_?\s*([0-9]{4})', name)
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)\s*_?\s*(\d{4})', name)
     if not m:
         return None
     try:
-        return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+        return datetime.strptime(
+            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
+        )
     except:
         return None
 
 def find_excel():
     files = glob.glob("*.xlsx")
     dated = [(extract_date(f), f) for f in files if extract_date(f)]
+    if not dated:
+        raise Exception("❌ No dated Excel file found")
     dated.sort(reverse=True)
     return dated[0][1]
 
 EXCEL_FILE = find_excel()
-print("Using Excel:", EXCEL_FILE)
+print("📊 Using Excel:", EXCEL_FILE)
 
-# ---------------- HELPERS ----------------
+# -------------------------------------------------
+# HELPERS
+# -------------------------------------------------
 def downtime_to_minutes(txt):
     if not txt:
         return 0
-    txt = txt.lower()
+    txt = str(txt).lower()
     mins = 0
     if m := re.search(r'(\d+)\s*hr', txt):
         mins += int(m.group(1)) * 60
@@ -39,17 +50,15 @@ def downtime_to_minutes(txt):
         mins += int(m.group(1))
     return mins
 
-# ---------------- READ SHEET ----------------
-def read_sheet(sheet):
+# -------------------------------------------------
+# READ SHEET
+# -------------------------------------------------
+def read_sheet(sheet_name):
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb[sheet]
+    ws = wb[sheet_name]
 
     title = ws["A1"].value or ""
-
-    headers = []
-    for c in ws[2]:
-        if c.value:
-            headers.append(str(c.value).strip())
+    headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
 
     rows = []
     for r in ws.iter_rows(min_row=3, max_col=len(headers)):
@@ -59,7 +68,11 @@ def read_sheet(sheet):
 
     return title, headers, rows
 
+# -------------------------------------------------
+# LOAD DATA
+# -------------------------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
+
 weekly_title, headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
 quarterly_title = ""
@@ -67,26 +80,36 @@ quarterly_rows = []
 if len(wb.sheetnames) > 1:
     quarterly_title, _, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# ---------------- HEADER INDEX ----------------
+# -------------------------------------------------
+# HEADER INDEX (SAFE)
+# -------------------------------------------------
 norm_headers = [h.lower() for h in headers]
 
-def idx(name):
-    return norm_headers.index(name.lower())
+def idx(*names):
+    for n in names:
+        if n.lower() in norm_headers:
+            return norm_headers.index(n.lower())
+    return None
 
-idx_account = idx("account name")
-idx_uptime = idx("total uptime")
-idx_outage = idx("outage downtime")
-idx_rca = idx("rca of outage") if "rca of outage" in norm_headers else None
+IDX_ACCOUNT = idx("account name", "account")
+IDX_UPTIME = idx("total uptime", "uptime")
+IDX_OUTAGE = idx("outage downtime")
+IDX_RCA = idx("rca of outage")
 
-# ---------------- NORMALIZE UPTIME ----------------
+if None in (IDX_ACCOUNT, IDX_UPTIME, IDX_OUTAGE):
+    raise Exception("❌ Mandatory columns missing in Excel")
+
+# -------------------------------------------------
+# NORMALIZE UPTIME (DECIMAL → %)
+# -------------------------------------------------
 def normalize(rows):
     values = []
     for r in rows:
         try:
-            v = float(r[idx_uptime])
+            v = float(r[IDX_UPTIME])
             if v <= 1:
                 v *= 100
-            r[idx_uptime] = f"{v:.2f}%"
+            r[IDX_UPTIME] = f"{v:.2f}%"
             values.append(v)
         except:
             pass
@@ -95,19 +118,29 @@ def normalize(rows):
 weekly_uptimes = normalize(weekly_rows)
 normalize(quarterly_rows)
 
-# ---------------- KPIs ----------------
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-total_downtime = sum(downtime_to_minutes(r[idx_outage]) for r in weekly_rows)
-outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[idx_outage]) > 0)
+# -------------------------------------------------
+# KPIs
+# -------------------------------------------------
+overall_uptime = (
+    f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
 
-max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_outage]))
-most_affected = max_row[idx_account]
+total_downtime = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
+outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[IDX_OUTAGE]) > 0)
 
-major_rca = ""
-if idx_rca is not None:
-    major_rca = max_row[idx_rca]
+major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[IDX_OUTAGE]))
+most_affected = major_row[IDX_ACCOUNT]
 
-# ---------------- TABLE BUILDER ----------------
+major_incident = {
+    "account": major_row[IDX_ACCOUNT],
+    "outage": major_row[IDX_OUTAGE],
+    "rca": major_row[IDX_RCA] if IDX_RCA is not None else ""
+}
+
+# -------------------------------------------------
+# BUILD TABLE (ALL UPTIME GREEN ✔)
+# -------------------------------------------------
 def build_table(headers, rows):
     html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
@@ -116,9 +149,9 @@ def build_table(headers, rows):
 
     for r in rows:
         html += "<tr>"
-        for j, v in enumerate(r):
-            if j == idx_uptime:
-                html += f"<td class='uptime-ok'><span class='tick-circle'>✓</span>{v}</td>"
+        for i, v in enumerate(r):
+            if i == IDX_UPTIME:
+                html += f"<td><span class='tick-circle'>✔</span>{v}</td>"
             else:
                 html += f"<td>{v}</td>"
         html += "</tr>"
@@ -129,21 +162,32 @@ def build_table(headers, rows):
 weekly_table = build_table(headers, weekly_rows)
 quarterly_table = build_table(headers, quarterly_rows) if quarterly_rows else ""
 
-# ---------------- DONUT ----------------
+# -------------------------------------------------
+# DONUT CHART (EXACT STYLE)
+# -------------------------------------------------
 labels, values = [], []
 for r in weekly_rows:
-    mins = downtime_to_minutes(r[idx_outage])
+    mins = downtime_to_minutes(r[IDX_OUTAGE])
     if mins > 0:
-        labels.append(r[idx_account])
+        labels.append(r[IDX_ACCOUNT])
         values.append(mins)
 
 if values:
     plt.figure(figsize=(4,4))
-    plt.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+    plt.pie(
+        values,
+        labels=labels,
+        startangle=90,
+        wedgeprops=dict(width=0.35),
+        autopct="%1.1f%%"
+    )
+    plt.text(0, 0, overall_uptime, ha="center", va="center", fontsize=12, weight="bold")
     plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
     plt.close()
 
-# ---------------- RENDER ----------------
+# -------------------------------------------------
+# RENDER HTML
+# -------------------------------------------------
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
@@ -156,15 +200,11 @@ html = template.render(
     outage_count=outage_count,
     total_downtime=total_downtime,
     most_affected=most_affected,
-    major_incident={
-        "account": most_affected,
-        "outage": max_row[idx_outage],
-        "rca": major_rca
-    }
+    major_incident=major_incident
 )
 
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
 with open(out, "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ Report generated:", out)
+print("✅ FINAL REPORT GENERATED:", out)
