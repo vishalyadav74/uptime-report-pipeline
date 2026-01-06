@@ -48,7 +48,7 @@ def downtime_to_minutes(txt):
     return mins
 
 # -------------------------------------------------
-# READ SHEET (RAW)
+# READ SHEET
 # -------------------------------------------------
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -95,7 +95,7 @@ if idx_account is None or idx_uptime is None or idx_outage is None:
     raise Exception(f"❌ Required columns not found. Headers present: {headers}")
 
 # -------------------------------------------------
-# CONVERT DECIMAL UPTIME → PERCENT (IN PLACE)
+# CONVERT DECIMAL UPTIME → PERCENT
 # -------------------------------------------------
 def normalize_uptime(rows):
     uptimes = []
@@ -133,7 +133,7 @@ max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_outage]))
 most_affected = max_row[idx_account]
 
 # -------------------------------------------------
-# BUILD TABLE (GREEN / RED LOGIC)
+# BUILD TABLE (ALL GREEN + GREEN TICK)
 # -------------------------------------------------
 def build_table(headers, rows):
     html = "<table class='uptime-table'><thead><tr>"
@@ -147,10 +147,10 @@ def build_table(headers, rows):
 
         for j, v in enumerate(r):
             if j == idx_uptime:
-                if downtime_to_minutes(r[idx_outage]) > 0:
-                    html += f"<td style='color:#dc2626;font-weight:600;'>{v}</td>"
-                else:
-                    html += f"<td style='color:#16a34a;font-weight:600;'>✔ {v}</td>"
+                html += (
+                    "<td style='color:#16a34a;font-weight:600;'>"
+                    "<span class='tick-circle'>✓</span>" + v + "</td>"
+                )
             else:
                 html += f"<td>{v}</td>"
 
@@ -163,7 +163,7 @@ weekly_table = build_table(headers, weekly_rows)
 quarterly_table = build_table(headers, quarterly_rows) if quarterly_rows else ""
 
 # -------------------------------------------------
-# CHART (WEEKLY DOWNTIME)
+# DONUT CHART (STRONG)
 # -------------------------------------------------
 labels, values = [], []
 for r in weekly_rows:
@@ -173,10 +173,30 @@ for r in weekly_rows:
         values.append(mins)
 
 if values:
-    plt.figure(figsize=(4,4))
-    plt.pie(values, labels=labels, autopct="%1.1f%%")
-    plt.title("Weekly Downtime Breakdown")
-    plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
+    plt.figure(figsize=(5.2, 5.2))
+    colors = ["#f97316", "#3b82f6", "#22c55e", "#ef4444", "#a855f7"]
+
+    plt.pie(
+        values,
+        labels=labels,
+        autopct="%1.1f%%",
+        startangle=140,
+        colors=colors[:len(values)],
+        pctdistance=0.78,
+        textprops={"fontsize":11, "weight":"bold"}
+    )
+
+    centre_circle = plt.Circle((0, 0), 0.55, fc="white")
+    plt.gca().add_artist(centre_circle)
+
+    plt.title("Weekly Downtime Breakdown", fontsize=13, fontweight="bold", pad=14)
+    plt.axis("equal")
+
+    plt.savefig(
+        os.path.join(OUTPUT_DIR, "downtime_chart.png"),
+        dpi=140,
+        bbox_inches="tight"
+    )
     plt.close()
 
 # -------------------------------------------------
