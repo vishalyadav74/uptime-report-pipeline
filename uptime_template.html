@@ -93,6 +93,7 @@ body{
 .dot-4{ background:#10b981; }
 .dot-5{ background:#9ca3af; }
 
+/* SECTION HEADER */
 .section-header{
   margin:12px 0 6px;
   padding-left:8px;
@@ -174,7 +175,7 @@ body{
 </table>
 </td></tr>
 
-<!-- INCIDENT + DOWNTIME -->
+<!-- INCIDENT + WEEKLY DONUT -->
 <tr><td class="section">
 <table width="100%" cellspacing="10" cellpadding="0">
 <tr>
@@ -232,11 +233,28 @@ body{
 {{ weekly_table | safe }}
 </td></tr>
 
-<!-- QUARTERLY TABLE -->
+<!-- QUARTERLY TABLE + DONUT -->
 {% if quarterly_table %}
 <tr><td class="section">
 <div class="section-header">{{ quarterly_title }}</div>
-{{ quarterly_table | safe }}
+
+<table width="100%" cellspacing="10" cellpadding="0">
+<tr>
+<td width="60%">
+  {{ quarterly_table | safe }}
+</td>
+
+<td width="40%" valign="top">
+  <div class="downtime-card">
+    <div class="downtime-title">Quarterly Downtime Breakdown</div>
+    <img src="cid:quarterly_downtime_chart"
+         width="180"
+         style="display:block;margin:auto;">
+  </div>
+</td>
+</tr>
+</table>
+
 </td></tr>
 {% endif %}
 
