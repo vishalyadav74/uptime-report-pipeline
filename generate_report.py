@@ -9,14 +9,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ---------------- PICK LATEST EXCEL (FIXED) ----------------
+# ---------------- PICK LATEST EXCEL ----------------
 def extract_date(name):
-    """
-    Supports:
-    uptime_latest_25th_Dec_2025.xlsx
-    report-25th-Dec-2025.xlsx
-    25th Dec 2025.xlsx
-    """
     m = re.search(
         r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
         name,
@@ -73,42 +67,73 @@ def read_sheet(sheet_name):
 
 # ---------------- LOAD DATA ----------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
-weekly_title, headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
-quarterly_title, quarterly_rows = "", []
+# WEEKLY
+weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
+
+# QUARTERLY
+quarterly_title, quarterly_headers, quarterly_rows = "", [], []
 if len(wb.sheetnames) > 1:
-    quarterly_title, _, quarterly_rows = read_sheet(wb.sheetnames[1])
+    quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# ---------------- HEADER INDEX ----------------
-norm = [h.lower() for h in headers]
+# ---------------- HEADER INDEX HELPERS ----------------
+def build_index(headers):
+    norm = [h.lower() for h in headers]
+    def idx(*names):
+        for n in names:
+            if n.lower() in norm:
+                return norm.index(n.lower())
+        return None
+    return idx
 
-def idx(*names):
-    for n in names:
-        if n.lower() in norm:
-            return norm.index(n.lower())
-    return None
+# Weekly indexes
+w_idx = build_index(weekly_headers)
+W_ACCOUNT = w_idx("account name", "account")
+W_UPTIME  = w_idx("total uptime", "uptime")
+W_OUTAGE  = w_idx("outage downtime")
+W_RCA     = w_idx("rca of outage")
 
-IDX_ACCOUNT = idx("account name", "account")
-IDX_UPTIME  = idx("total uptime", "uptime")
-IDX_OUTAGE  = idx("outage downtime")
-IDX_RCA     = idx("rca of outage")
+# Quarterly indexes
+q_idx = build_index(quarterly_headers)
+Q_ACCOUNT = q_idx("account name", "account")
+Q_UPTIME  = q_idx("total uptime", "uptime")
+Q_YTD     = q_idx("ytd uptime", "ytd")
 
-# ---------------- NORMALIZE UPTIME ----------------
-def normalize(rows):
-    values = []
+# ---------------- NORMALIZE ----------------
+def normalize_weekly(rows):
+    vals = []
     for r in rows:
         try:
-            v = float(r[IDX_UPTIME])
+            v = float(r[W_UPTIME])
             if v <= 1:
                 v *= 100
-            r[IDX_UPTIME] = f"{v:.2f}%"
-            values.append(v)
+            r[W_UPTIME] = f"{v:.2f}%"
+            vals.append(v)
         except:
             pass
-    return values
+    return vals
 
-weekly_uptimes = normalize(weekly_rows)
-normalize(quarterly_rows)
+def normalize_quarterly(rows):
+    for r in rows:
+        try:
+            v = float(r[Q_UPTIME])
+            if v <= 1:
+                v *= 100
+            r[Q_UPTIME] = f"{v:.2f}%"
+        except:
+            pass
+
+        if Q_YTD is not None:
+            try:
+                y = float(r[Q_YTD])
+                if y <= 1:
+                    y *= 100
+                r[Q_YTD] = f"{y:.2f}%"
+            except:
+                pass
+
+weekly_uptimes = normalize_weekly(weekly_rows)
+normalize_quarterly(quarterly_rows)
 
 # ---------------- KPIs ----------------
 overall_uptime = (
@@ -116,34 +141,31 @@ overall_uptime = (
     if weekly_uptimes else "N/A"
 )
 
-total_downtime = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
-outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[IDX_OUTAGE]) > 0)
+total_downtime = sum(downtime_to_minutes(r[W_OUTAGE]) for r in weekly_rows)
+outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUTAGE]) > 0)
 
-major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[IDX_OUTAGE]))
-
+major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUTAGE]))
 major_incident = {
-    "account": major_row[IDX_ACCOUNT],
-    "outage": major_row[IDX_OUTAGE],
-    "rca": major_row[IDX_RCA] if IDX_RCA is not None else ""
+    "account": major_row[W_ACCOUNT],
+    "outage": major_row[W_OUTAGE],
+    "rca": major_row[W_RCA] if W_RCA is not None else ""
 }
 
 # ---------------- WEEKLY BREAKDOWN ----------------
 breakdown = []
-total_outage = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
+total_outage = sum(downtime_to_minutes(r[W_OUTAGE]) for r in weekly_rows)
 
 for r in weekly_rows:
-    mins = downtime_to_minutes(r[IDX_OUTAGE])
+    mins = downtime_to_minutes(r[W_OUTAGE])
     if mins > 0:
         pct = (mins / total_outage) * 100 if total_outage else 0
         breakdown.append({
-            "account": r[IDX_ACCOUNT],
+            "account": r[W_ACCOUNT],
             "percent": f"{pct:.1f}%"
         })
 
-affected_accounts = " | ".join(b["account"] for b in breakdown)
-
 # ---------------- BUILD TABLE ----------------
-def build_table(headers, rows):
+def build_table(headers, rows, uptime_idx):
     html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
@@ -152,7 +174,7 @@ def build_table(headers, rows):
     for r in rows:
         html += "<tr>"
         for i, v in enumerate(r):
-            if i == IDX_UPTIME:
+            if i == uptime_idx:
                 html += f"<td><span class='tick-circle'>✔</span>{v}</td>"
             else:
                 html += f"<td>{v}</td>"
@@ -161,15 +183,15 @@ def build_table(headers, rows):
     html += "</tbody></table>"
     return html
 
-weekly_table = build_table(headers, weekly_rows)
-quarterly_table = build_table(headers, quarterly_rows) if quarterly_rows else ""
+weekly_table    = build_table(weekly_headers, weekly_rows, W_UPTIME)
+quarterly_table = build_table(quarterly_headers, quarterly_rows, Q_UPTIME) if quarterly_rows else ""
 
-# ---------------- DONUT CHART ----------------
+# ---------------- DONUT ----------------
 labels, values = [], []
 for r in weekly_rows:
-    mins = downtime_to_minutes(r[IDX_OUTAGE])
+    mins = downtime_to_minutes(r[W_OUTAGE])
     if mins > 0:
-        labels.append(r[IDX_ACCOUNT])
+        labels.append(r[W_ACCOUNT])
         values.append(mins)
 
 if values:
@@ -181,18 +203,14 @@ if values:
         autopct="%1.1f%%",
         pctdistance=0.78
     )
-    plt.text(0, 0, overall_uptime,
-             ha="center", va="center",
+    plt.text(0, 0, overall_uptime, ha="center", va="center",
              fontsize=14, fontweight="bold")
     plt.axis("equal")
-    plt.savefig(
-        os.path.join(OUTPUT_DIR, "downtime_chart.png"),
-        bbox_inches="tight",
-        pad_inches=0.05
-    )
+    plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"),
+                bbox_inches="tight", pad_inches=0.05)
     plt.close()
 
-# ---------------- RENDER HTML ----------------
+# ---------------- RENDER ----------------
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
@@ -205,8 +223,7 @@ html = template.render(
     outage_count=outage_count,
     total_downtime=total_downtime,
     major_incident=major_incident,
-    breakdown=breakdown,
-    affected_accounts=affected_accounts
+    breakdown=breakdown
 )
 
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
