@@ -2,117 +2,62 @@ from openpyxl import load_workbook
 from jinja2 import Template
 import os, sys, glob, time, re
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
-# ----------------------------------
-# Pick LATEST dated Excel file
-# ----------------------------------
-def extract_date_from_filename(name):
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# ---------------- PICK LATEST EXCEL ----------------
+def extract_date(name):
     m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', name)
     if not m:
         return None
-    try:
-        return datetime.strptime(
-            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
-        )
-    except:
-        return None
+    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
 
 def find_excel():
-    files = glob.glob("*.xlsx") + glob.glob("*.xls")
-    dated = [(extract_date_from_filename(f), f)
-             for f in files if extract_date_from_filename(f)]
-    if not dated:
-        raise Exception("❌ No valid dated Excel found")
+    files = glob.glob("*.xlsx")
+    dated = [(extract_date(f), f) for f in files if extract_date(f)]
     dated.sort(reverse=True)
     return dated[0][1]
 
-EXCEL_FILE = sys.argv[1] if len(sys.argv) > 1 else find_excel()
-print(f"✅ Using Excel: {EXCEL_FILE}")
+EXCEL_FILE = find_excel()
+print("Using Excel:", EXCEL_FILE)
 
-# ----------------------------------
-# Helpers
-# ----------------------------------
-def get_cell_display(cell):
-    if cell.value is None:
-        return ""
-    if isinstance(cell.value, (int, float)) and "%" in str(cell.number_format):
-        return f"{cell.value * 100:.2f}%"
-    return str(cell.value)
-
-def wrap_uptime(val):
-    try:
-        num = float(val.replace("%", "").strip())
-        cls = "uptime-bad" if num < 99.95 else "uptime-good"
-        return f'<span class="{cls}">{val}</span>'
-    except:
-        return val
-
+# ---------------- HELPERS ----------------
 def downtime_to_minutes(txt):
     if not txt:
         return 0
-    txt = txt.lower()
     mins = 0
-    if m := re.search(r'(\d+)\s*hr', txt):
+    if m := re.search(r'(\d+)\s*hr', txt.lower()):
         mins += int(m.group(1)) * 60
-    if m := re.search(r'(\d+)\s*min', txt):
+    if m := re.search(r'(\d+)\s*min', txt.lower()):
         mins += int(m.group(1))
     return mins
 
-# ----------------------------------
-# Read sheet (OUTLOOK SAFE)
-# ----------------------------------
-def read_sheet(sheet_name):
+# ---------------- READ SHEET ----------------
+def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb[sheet_name]
+    ws = wb[sheet]
 
-    title = ws["A1"].value or ""
-    raw_headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
-
-    end_idx = len(raw_headers)
-    for i, h in enumerate(raw_headers):
-        if h.lower() == "rca of outage":
-            end_idx = i + 1
-            break
-
-    headers = raw_headers[:end_idx]
+    title = ws["A1"].value
+    headers = [c.value for c in ws[2]]
     rows = []
 
-    for r in ws.iter_rows(min_row=3, max_col=end_idx):
-        row = [get_cell_display(c) for c in r]
+    for r in ws.iter_rows(min_row=3, max_col=len(headers)):
+        row = [str(c.value) if c.value else "" for c in r]
         if any(row):
             rows.append(row)
 
-    for col in ["Total Uptime", "YTD uptime"]:
-        if col in headers:
-            idx = headers.index(col)
-            for r in rows:
-                r[idx] = wrap_uptime(r[idx])
-
-    # ✅ OUTLOOK SAFE TABLE (COLGROUP CONTROLS WIDTH)
-    html = """
-    <table class="uptime-table" cellpadding="0" cellspacing="0">
-      <colgroup>
-        <col style="width:10%">
-        <col style="width:9%">
-        <col style="width:10%">
-        <col style="width:9%">
-        <col style="width:10%">
-        <col style="width:22%">  <!-- Remarks -->
-        <col style="width:30%">  <!-- RCA -->
-      </colgroup>
-      <thead><tr>
-    """
-
+    html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr></thead><tbody>"
 
     for i, r in enumerate(rows):
-        bg = "#ffffff" if i % 2 == 0 else "#f5f5f5"
-        html += f"<tr style='background:{bg};'>"
+        bg = "#fafafa" if i % 2 else "#ffffff"
+        html += f"<tr style='background:{bg}'>"
         for v in r:
             html += f"<td>{v}</td>"
         html += "</tr>"
@@ -120,49 +65,51 @@ def read_sheet(sheet_name):
     html += "</tbody></table>"
     return title, html, headers, rows
 
-# ----------------------------------
-# Load sheets
-# ----------------------------------
+# ---------------- LOAD DATA ----------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
-sheets = wb.sheetnames
+weekly_title, weekly_table, headers, rows = read_sheet(wb.sheetnames[0])
 
-weekly_title, weekly_table, weekly_headers, weekly_rows = read_sheet(sheets[0])
+quarterly_title = quarterly_table = ""
+if len(wb.sheetnames) > 1:
+    quarterly_title, quarterly_table, _, _ = read_sheet(wb.sheetnames[1])
 
-quarterly_title = ""
-quarterly_table = ""
-if len(sheets) > 1:
-    quarterly_title, quarterly_table, _, _ = read_sheet(sheets[1])
+# ---------------- KPIs ----------------
+idx_outage = headers.index("Outage Downtime")
+idx_account = headers.index("Account Name")
+idx_uptime = headers.index("Total Uptime")
 
-# ----------------------------------
-# Major Incident
-# ----------------------------------
-major_incident = {"account": "", "outage": "", "rca": ""}
-major_story = ""
+total_downtime = sum(downtime_to_minutes(r[idx_outage]) for r in rows)
+outage_count = sum(1 for r in rows if downtime_to_minutes(r[idx_outage]) > 0)
 
-norm_headers = [h.lower() for h in weekly_headers]
+uptimes = [float(r[idx_uptime].replace("%","")) for r in rows if "%" in r[idx_uptime]]
+overall_uptime = f"{sum(uptimes)/len(uptimes):.2f}%"
 
-def idx(name):
-    return norm_headers.index(name.lower()) if name.lower() in norm_headers else None
+max_row = max(rows, key=lambda r: downtime_to_minutes(r[idx_outage]))
+most_affected = max_row[idx_account]
 
-idx_out = idx("outage downtime")
-idx_acc = idx("account name")
-idx_rca = idx("rca of outage")
+# ---------------- CHART ----------------
+labels, values = [], []
+for r in rows:
+    mins = downtime_to_minutes(r[idx_outage])
+    if mins > 0:
+        labels.append(r[idx_account])
+        values.append(mins)
 
-if idx_out is not None and idx_acc is not None:
-    max_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[idx_out]))
-    if downtime_to_minutes(max_row[idx_out]) > 0:
-        major_incident["account"] = max_row[idx_acc]
-        major_incident["outage"] = max_row[idx_out]
-        major_incident["rca"] = max_row[idx_rca] if idx_rca is not None else ""
-        major_story = (
-            f"<b>{major_incident['account']}</b> experienced the highest outage "
-            f"of <b>{major_incident['outage']}</b> during the week."
-        )
+plt.figure(figsize=(4,4))
+plt.pie(values, labels=labels, autopct="%1.1f%%")
+plt.title("Weekly Downtime Breakdown")
+plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
+plt.close()
 
-# ----------------------------------
-# Render HTML
-# ----------------------------------
-with open(os.path.join(BASE_DIR, "uptime_template.html"), encoding="utf-8") as f:
+# ---------------- MAJOR INCIDENT ----------------
+major_incident = {
+    "account": most_affected,
+    "outage": max_row[idx_outage],
+    "rca": ""
+}
+
+# ---------------- RENDER HTML ----------------
+with open("uptime_template.html") as f:
     template = Template(f.read())
 
 html = template.render(
@@ -170,15 +117,15 @@ html = template.render(
     quarterly_title=quarterly_title,
     weekly_table=weekly_table,
     quarterly_table=quarterly_table,
-    major_incident=major_incident,
-    major_story=major_story,
-    generated_date=time.strftime("%d-%b-%Y %H:%M")
+    overall_uptime=overall_uptime,
+    outage_count=outage_count,
+    total_downtime=total_downtime,
+    most_affected=most_affected,
+    major_incident=major_incident
 )
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
-
-with open(out, "w", encoding="utf-8") as f:
+with open(out, "w") as f:
     f.write(html)
 
-print("✅ REPORT GENERATED:", out)
+print("Report generated:", out)
