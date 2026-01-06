@@ -1,6 +1,6 @@
 from openpyxl import load_workbook
 from jinja2 import Template
-import os, sys, glob, time, re
+import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
@@ -57,30 +57,17 @@ def read_sheet(sheet):
         if any(row):
             rows.append(row)
 
-    html = "<table class='uptime-table'><thead><tr>"
-    for h in headers:
-        html += f"<th>{h}</th>"
-    html += "</tr></thead><tbody>"
-
-    for i, r in enumerate(rows):
-        bg = "#fafafa" if i % 2 else "#ffffff"
-        html += f"<tr style='background:{bg}'>"
-        for v in r:
-            html += f"<td>{v}</td>"
-        html += "</tr>"
-
-    html += "</tbody></table>"
-    return title, html, headers, rows
+    return title, headers, rows
 
 # ---------------- LOAD DATA ----------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
-weekly_title, weekly_table, headers, rows = read_sheet(wb.sheetnames[0])
+weekly_title, headers, rows = read_sheet(wb.sheetnames[0])
 
-quarterly_title = quarterly_table = ""
+quarterly_title = quarterly_rows = ""
 if len(wb.sheetnames) > 1:
-    quarterly_title, quarterly_table, _, _ = read_sheet(wb.sheetnames[1])
+    quarterly_title, _, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# ---------------- DYNAMIC HEADER INDEX (FIX) ----------------
+# ---------------- DYNAMIC HEADER INDEX ----------------
 norm_headers = [h.lower() for h in headers]
 
 def get_idx(*names):
@@ -114,6 +101,30 @@ overall_uptime = f"{sum(uptimes)/len(uptimes):.2f}%" if uptimes else "N/A"
 max_row = max(rows, key=lambda r: downtime_to_minutes(r[idx_outage]))
 most_affected = max_row[idx_account]
 
+# ---------------- BUILD WEEKLY TABLE (GREEN / RED LOGIC) ----------------
+weekly_table = "<table class='uptime-table'><thead><tr>"
+for h in headers:
+    weekly_table += f"<th>{h}</th>"
+weekly_table += "</tr></thead><tbody>"
+
+for i, r in enumerate(rows):
+    bg = "#fafafa" if i % 2 else "#ffffff"
+    weekly_table += f"<tr style='background:{bg}'>"
+
+    for j, v in enumerate(r):
+        # uptime column
+        if j == idx_uptime and "%" in v:
+            if downtime_to_minutes(r[idx_outage]) > 0:
+                weekly_table += f"<td style='color:#dc2626;font-weight:600;'>{v}</td>"
+            else:
+                weekly_table += f"<td style='color:#16a34a;font-weight:600;'>✔ {v}</td>"
+        else:
+            weekly_table += f"<td>{v}</td>"
+
+    weekly_table += "</tr>"
+
+weekly_table += "</tbody></table>"
+
 # ---------------- CHART ----------------
 labels, values = [], []
 for r in rows:
@@ -144,7 +155,7 @@ html = template.render(
     weekly_title=weekly_title,
     quarterly_title=quarterly_title,
     weekly_table=weekly_table,
-    quarterly_table=quarterly_table,
+    quarterly_table="",   # quarterly simple for now
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
