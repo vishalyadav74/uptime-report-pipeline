@@ -6,19 +6,25 @@ import matplotlib.pyplot as plt
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ---------------- PICK LATEST EXCEL ----------------
 def extract_date(name):
-    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)_([0-9]{4})', name)
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)\s*_?\s*([0-9]{4})', name)
     if not m:
         return None
-    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+    try:
+        return datetime.strptime(
+            f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y"
+        )
+    except:
+        return None
 
 def find_excel():
     files = glob.glob("*.xlsx")
     dated = [(extract_date(f), f) for f in files if extract_date(f)]
+    if not dated:
+        raise Exception("❌ No valid dated Excel found")
     dated.sort(reverse=True)
     return dated[0][1]
 
@@ -29,10 +35,11 @@ print("Using Excel:", EXCEL_FILE)
 def downtime_to_minutes(txt):
     if not txt:
         return 0
+    txt = txt.lower()
     mins = 0
-    if m := re.search(r'(\d+)\s*hr', txt.lower()):
+    if m := re.search(r'(\d+)\s*hr', txt):
         mins += int(m.group(1)) * 60
-    if m := re.search(r'(\d+)\s*min', txt.lower()):
+    if m := re.search(r'(\d+)\s*min', txt):
         mins += int(m.group(1))
     return mins
 
@@ -41,12 +48,12 @@ def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet]
 
-    title = ws["A1"].value
-    headers = [c.value for c in ws[2]]
+    title = ws["A1"].value or ""
+    headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
     rows = []
 
     for r in ws.iter_rows(min_row=3, max_col=len(headers)):
-        row = [str(c.value) if c.value else "" for c in r]
+        row = [str(c.value).strip() if c.value else "" for c in r]
         if any(row):
             rows.append(row)
 
@@ -73,16 +80,36 @@ quarterly_title = quarterly_table = ""
 if len(wb.sheetnames) > 1:
     quarterly_title, quarterly_table, _, _ = read_sheet(wb.sheetnames[1])
 
-# ---------------- KPIs ----------------
-idx_outage = headers.index("Outage Downtime")
-idx_account = headers.index("Account Name")
-idx_uptime = headers.index("Total Uptime")
+# ---------------- DYNAMIC HEADER INDEX (FIX) ----------------
+norm_headers = [h.lower() for h in headers]
 
+def get_idx(*names):
+    for n in names:
+        if n.lower() in norm_headers:
+            return norm_headers.index(n.lower())
+    return None
+
+idx_outage  = get_idx("outage downtime", "downtime")
+idx_account = get_idx("account name", "account")
+idx_uptime  = get_idx("total uptime", "uptime", "ytd uptime")
+
+if idx_outage is None or idx_account is None or idx_uptime is None:
+    raise Exception(f"❌ Required columns not found. Headers present: {headers}")
+
+# ---------------- KPIs ----------------
 total_downtime = sum(downtime_to_minutes(r[idx_outage]) for r in rows)
 outage_count = sum(1 for r in rows if downtime_to_minutes(r[idx_outage]) > 0)
 
-uptimes = [float(r[idx_uptime].replace("%","")) for r in rows if "%" in r[idx_uptime]]
-overall_uptime = f"{sum(uptimes)/len(uptimes):.2f}%"
+uptimes = []
+for r in rows:
+    val = r[idx_uptime]
+    if "%" in val:
+        try:
+            uptimes.append(float(val.replace("%", "").strip()))
+        except:
+            pass
+
+overall_uptime = f"{sum(uptimes)/len(uptimes):.2f}%" if uptimes else "N/A"
 
 max_row = max(rows, key=lambda r: downtime_to_minutes(r[idx_outage]))
 most_affected = max_row[idx_account]
@@ -95,11 +122,12 @@ for r in rows:
         labels.append(r[idx_account])
         values.append(mins)
 
-plt.figure(figsize=(4,4))
-plt.pie(values, labels=labels, autopct="%1.1f%%")
-plt.title("Weekly Downtime Breakdown")
-plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
-plt.close()
+if values:
+    plt.figure(figsize=(4,4))
+    plt.pie(values, labels=labels, autopct="%1.1f%%")
+    plt.title("Weekly Downtime Breakdown")
+    plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
+    plt.close()
 
 # ---------------- MAJOR INCIDENT ----------------
 major_incident = {
@@ -109,7 +137,7 @@ major_incident = {
 }
 
 # ---------------- RENDER HTML ----------------
-with open("uptime_template.html") as f:
+with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
 html = template.render(
@@ -125,7 +153,7 @@ html = template.render(
 )
 
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
-with open(out, "w") as f:
+with open(out, "w", encoding="utf-8") as f:
     f.write(html)
 
-print("Report generated:", out)
+print("✅ Report generated:", out)
