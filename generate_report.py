@@ -72,16 +72,14 @@ def read_sheet(sheet_name):
 # LOAD DATA
 # -------------------------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
-
 weekly_title, headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
-quarterly_title = ""
-quarterly_rows = []
+quarterly_title, quarterly_rows = "", []
 if len(wb.sheetnames) > 1:
     quarterly_title, _, quarterly_rows = read_sheet(wb.sheetnames[1])
 
 # -------------------------------------------------
-# HEADER INDEX (SAFE)
+# HEADER INDEX
 # -------------------------------------------------
 norm_headers = [h.lower() for h in headers]
 
@@ -92,15 +90,12 @@ def idx(*names):
     return None
 
 IDX_ACCOUNT = idx("account name", "account")
-IDX_UPTIME = idx("total uptime", "uptime")
-IDX_OUTAGE = idx("outage downtime")
-IDX_RCA = idx("rca of outage")
-
-if None in (IDX_ACCOUNT, IDX_UPTIME, IDX_OUTAGE):
-    raise Exception("❌ Mandatory columns missing in Excel")
+IDX_UPTIME  = idx("total uptime", "uptime")
+IDX_OUTAGE  = idx("outage downtime")
+IDX_RCA     = idx("rca of outage")
 
 # -------------------------------------------------
-# NORMALIZE UPTIME (DECIMAL → %)
+# NORMALIZE UPTIME
 # -------------------------------------------------
 def normalize(rows):
     values = []
@@ -127,7 +122,7 @@ overall_uptime = (
 )
 
 total_downtime = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
-outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[IDX_OUTAGE]) > 0)
+outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[IDX_OUTAGE]) > 0)
 
 major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[IDX_OUTAGE]))
 most_affected = major_row[IDX_ACCOUNT]
@@ -139,7 +134,7 @@ major_incident = {
 }
 
 # -------------------------------------------------
-# BUILD TABLE (ALL UPTIME GREEN ✔)
+# BUILD TABLE (ALL GREEN ✔)
 # -------------------------------------------------
 def build_table(headers, rows):
     html = "<table class='uptime-table'><thead><tr>"
@@ -159,11 +154,11 @@ def build_table(headers, rows):
     html += "</tbody></table>"
     return html
 
-weekly_table = build_table(headers, weekly_rows)
+weekly_table    = build_table(headers, weekly_rows)
 quarterly_table = build_table(headers, quarterly_rows) if quarterly_rows else ""
 
 # -------------------------------------------------
-# DONUT CHART (EXACT STYLE)
+# DONUT CHART (ONLY OUTAGE ACCOUNTS)
 # -------------------------------------------------
 labels, values = [], []
 for r in weekly_rows:
@@ -181,7 +176,8 @@ if values:
         wedgeprops=dict(width=0.35),
         autopct="%1.1f%%"
     )
-    plt.text(0, 0, overall_uptime, ha="center", va="center", fontsize=12, weight="bold")
+    plt.text(0, 0, overall_uptime, ha="center", va="center",
+             fontsize=12, weight="bold")
     plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
     plt.close()
 
