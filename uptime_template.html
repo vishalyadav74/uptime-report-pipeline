@@ -15,13 +15,15 @@ body{
 }
 
 .container{ width:100%; background:#ffffff; }
-.section{ padding:18px 28px; }
+
+/* 🔧 spacing reduced */
+.section{ padding:12px 20px; }
 
 /* ---------- HEADER ---------- */
 .header{
   background:#e01e7e;
   color:#ffffff;
-  padding:22px 28px;
+  padding:18px 22px;
 }
 .header-title{
   font-size:18px;
@@ -34,14 +36,14 @@ body{
 }
 
 /* ---------- KPI ---------- */
-.kpi-row{ width:100%; margin-top:16px; }
+.kpi-row{ width:100%; margin-top:10px; }
 .kpi{
   background:#f9fafb;
   border-radius:8px;
-  padding:14px;
+  padding:12px;
 }
 .kpi-value{
-  font-size:18px;
+  font-size:17px;
   font-weight:700;
 }
 .kpi-green{ color:#16a34a; }
@@ -57,47 +59,56 @@ body{
 /* ---------- INCIDENT ---------- */
 .incident{
   background:#fff5f5;
-  border-left:6px solid #ef4444;
-  padding:22px 20px;
+  border-left:5px solid #ef4444;
+  padding:18px;
   border-radius:6px;
-  min-height:150px;
-  line-height:1.8;
+  min-height:120px;
+  line-height:1.7;
 }
 .incident-title{
   font-weight:600;
   color:#dc2626;
-  margin-bottom:10px;
+  margin-bottom:8px;
 }
 
 /* ---------- DONUT ---------- */
 .donut-box{
   background:#ffffff;
-  border-radius:10px;
-  padding:10px;
+  border-radius:8px;
+  padding:6px;
   text-align:center;
+}
+
+/* ---------- SECTION HEADER (Weekly / Quarterly) ---------- */
+.section-header{
+  margin:14px 0 6px;
+  padding-left:8px;
+  border-left:4px solid #e01e7e;
+  font-weight:600;
 }
 
 /* ---------- TABLE ---------- */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
-  margin-top:10px;
+  margin-top:6px;
+}
+.uptime-table th,
+.uptime-table td{
+  border:1px solid #e5e7eb;
+  padding:8px;
+  font-size:12px;
 }
 .uptime-table th{
   background:#e01e7e;
   color:#ffffff;
-  padding:10px;
-  font-size:12px;
   text-align:left;
-}
-.uptime-table td{
-  padding:9px;
-  border-bottom:1px solid #e5e7eb;
-  font-size:12px;
 }
 .uptime-table tr:nth-child(even){
   background:#fafafa;
 }
+
+/* ✔ tick restored */
 .tick-circle{
   display:inline-block;
   width:16px;
@@ -114,7 +125,7 @@ body{
 /* ---------- FOOTER ---------- */
 .footer{
   border-top:1px solid #e5e7eb;
-  padding:18px 28px;
+  padding:14px 20px;
   font-size:12px;
 }
 </style>
@@ -137,7 +148,7 @@ body{
 
 <!-- KPI -->
 <tr><td class="section">
-<table width="100%" cellpadding="0" cellspacing="10" class="kpi-row">
+<table width="100%" cellpadding="0" cellspacing="8" class="kpi-row">
 <tr>
 <td width="25%" class="kpi">
   <div class="kpi-value kpi-green">✔ {{ overall_uptime }}</div>
@@ -161,7 +172,7 @@ body{
 
 <!-- INCIDENT + DONUT -->
 <tr><td class="section">
-<table width="100%" cellpadding="0" cellspacing="16">
+<table width="100%" cellpadding="0" cellspacing="12">
 <tr>
 
 <td width="60%" valign="top">
@@ -177,7 +188,7 @@ body{
 
 <td width="40%" valign="top" align="center">
   <div class="donut-box">
-    <img src="cid:downtime_chart" width="240">
+    <img src="cid:downtime_chart" width="220">
   </div>
 </td>
 
@@ -187,14 +198,14 @@ body{
 
 <!-- WEEKLY -->
 <tr><td class="section">
-  <b>{{ weekly_title }}</b>
+  <div class="section-header">{{ weekly_title }}</div>
   {{ weekly_table | safe }}
 </td></tr>
 
 <!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr><td class="section">
-  <b>{{ quarterly_title }}</b>
+  <div class="section-header">{{ quarterly_title }}</div>
   {{ quarterly_table | safe }}
 </td></tr>
 {% endif %}
