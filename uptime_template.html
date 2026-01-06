@@ -14,75 +14,74 @@ body{
   color:#1f2937;
 }
 
-/* ===== COMMON ===== */
-.container{
-  width:100%;
-  background:#ffffff;
-}
+.container{ width:100%; background:#ffffff; }
+.section{ padding:18px 28px; }
 
-.section{
-  padding:18px 28px;
-}
+.title{ font-size:18px; font-weight:600; }
+.subtitle{ font-size:13px; color:#6b7280; margin-top:4px; }
 
-.title{
-  font-size:18px;
-  font-weight:600;
-}
-
-.subtitle{
-  font-size:13px;
-  color:#6b7280;
-  margin-top:4px;
-}
-
-/* ===== KPI CARDS ===== */
-.kpi-row{
-  width:100%;
-  margin-top:16px;
-}
-
+/* ---------- KPI ---------- */
+.kpi-row{ width:100%; margin-top:14px; }
 .kpi{
   background:#f9fafb;
-  border-radius:6px;
+  border-radius:8px;
   padding:14px;
-  text-align:left;
 }
+.kpi-value{ font-size:18px; font-weight:700; color:#16a34a; }
+.kpi-label{ font-size:12px; color:#6b7280; margin-top:4px; }
 
-.kpi-value{
-  font-size:18px;
-  font-weight:700;
-}
-
-.green{ color:#16a34a; }
-.red{ color:#dc2626; }
-
-.kpi-label{
-  font-size:12px;
-  color:#6b7280;
-  margin-top:4px;
-}
-
-/* ===== INCIDENT ===== */
+/* ---------- INCIDENT ---------- */
 .incident{
-  background:#fff1f2;
-  border-left:6px solid #dc2626;
-  padding:14px;
-  border-radius:4px;
+  background:#fff5f5;
+  border-left:6px solid #ef4444;
+  padding:22px 20px;
+  border-radius:6px;
+  min-height:150px;
+  line-height:1.8;
 }
-
 .incident-title{
   font-weight:600;
   color:#dc2626;
-  margin-bottom:8px;
+  margin-bottom:10px;
 }
 
-/* ===== TABLE ===== */
+/* ---------- DONUT ---------- */
+.donut-box{
+  background:#ffffff;
+  border-radius:10px;
+  padding:14px;
+  text-align:center;
+}
+.donut-center{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+}
+.donut-circle{
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  background:#22c55e;
+  color:#ffffff;
+  font-size:26px;
+  line-height:54px;
+  margin:0 auto 6px;
+  font-weight:700;
+}
+.donut-value{
+  font-size:14px;
+  font-weight:700;
+  color:#16a34a;
+}
+
+/* ---------- TABLE ---------- */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
   margin-top:10px;
 }
-
 .uptime-table th{
   background:#e01e7e;
   color:#ffffff;
@@ -90,24 +89,27 @@ body{
   font-size:12px;
   text-align:left;
 }
-
 .uptime-table td{
   padding:9px;
   border-bottom:1px solid #e5e7eb;
   font-size:12px;
 }
+.uptime-table tr:nth-child(even){ background:#fafafa; }
 
-.uptime-table tr:nth-child(even){
-  background:#fafafa;
+.tick-circle{
+  display:inline-block;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#22c55e;
+  color:#ffffff;
+  font-size:11px;
+  line-height:16px;
+  text-align:center;
+  margin-right:6px;
 }
 
-.tick{
-  color:#16a34a;
-  font-weight:700;
-  margin-right:4px;
-}
-
-/* ===== FOOTER ===== */
+/* ---------- FOOTER ---------- */
 .footer{
   border-top:1px solid #e5e7eb;
   padding:18px 28px;
@@ -119,30 +121,26 @@ body{
 <body>
 
 <table width="100%" cellpadding="0" cellspacing="0">
-<tr>
-<td align="center">
+<tr><td align="center">
 
 <table width="100%" class="container">
 
 <!-- HEADER -->
-<tr>
-<td class="section">
+<tr><td class="section">
   <div class="title">SaaS Accounts Application Uptime Report</div>
   <div class="subtitle">Weekly & Quarterly Availability Summary</div>
-</td>
-</tr>
+</td></tr>
 
 <!-- KPI -->
-<tr>
-<td class="section">
+<tr><td class="section">
 <table width="100%" cellpadding="0" cellspacing="10" class="kpi-row">
 <tr>
 <td width="25%" class="kpi">
-  <div class="kpi-value green">✔ {{ overall_uptime }}</div>
+  <div class="kpi-value">{{ overall_uptime }}</div>
   <div class="kpi-label">Overall Uptime for the Week</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value red">{{ outage_count }}</div>
+  <div class="kpi-value">{{ outage_count }}</div>
   <div class="kpi-label">Outages</div>
 </td>
 <td width="25%" class="kpi">
@@ -155,17 +153,16 @@ body{
 </td>
 </tr>
 </table>
-</td>
-</tr>
+</td></tr>
 
-<!-- INCIDENT + CHART -->
+<!-- INCIDENT + DONUT -->
+<tr><td class="section">
+<table width="100%" cellpadding="0" cellspacing="16">
 <tr>
-<td class="section">
-<table width="100%" cellpadding="0" cellspacing="12">
-<tr>
-<td width="55%" valign="top">
+
+<td width="60%" valign="top">
   <div class="incident">
-    <div class="incident-title">⚠ Major Incident of the Week</div>
+    <div class="incident-title">🚨 Major Incident of the Week</div>
     <div><b>Account:</b> {{ major_incident.account }}</div>
     <div><b>Outage Downtime:</b> {{ major_incident.outage }}</div>
     {% if major_incident.rca %}
@@ -174,35 +171,36 @@ body{
   </div>
 </td>
 
-<td width="45%" align="center">
-  <img src="cid:downtime_chart" width="260" alt="Weekly Downtime Breakdown">
+<td width="40%" valign="top" align="center">
+  <div class="donut-box" style="position:relative;">
+    <img src="cid:downtime_chart" width="260">
+    <div class="donut-center">
+      <div class="donut-circle">✓</div>
+      <div class="donut-value">{{ overall_uptime }}</div>
+    </div>
+  </div>
 </td>
+
 </tr>
 </table>
-</td>
-</tr>
+</td></tr>
 
 <!-- WEEKLY -->
-<tr>
-<td class="section">
+<tr><td class="section">
   <b>{{ weekly_title }}</b>
   {{ weekly_table | safe }}
-</td>
-</tr>
+</td></tr>
 
 <!-- QUARTERLY -->
 {% if quarterly_table %}
-<tr>
-<td class="section">
+<tr><td class="section">
   <b>{{ quarterly_title }}</b>
   {{ quarterly_table | safe }}
-</td>
-</tr>
+</td></tr>
 {% endif %}
 
 <!-- FOOTER -->
-<tr>
-<td class="footer">
+<tr><td class="footer">
 For any concern over above data, contact
 <a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
 
@@ -211,13 +209,10 @@ Atin Gambhir | Manager – ITSM (CDG)<br>
 <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
 www.businessnext.com<br>
 <b style="color:#e01e7e;">#UpForTomorrow</b>
-</td>
-</tr>
+</td></tr>
 
 </table>
-
-</td>
-</tr>
+</td></tr>
 </table>
 
 </body>
