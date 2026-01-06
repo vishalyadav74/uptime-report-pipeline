@@ -32,7 +32,9 @@ pipeline {
 
         stage('Generate Report') {
             steps {
-                sh "./venv/bin/python generate_report.py"
+                sh '''
+                  ./venv/bin/python generate_report.py
+                '''
             }
         }
 
@@ -42,7 +44,8 @@ pipeline {
                   ./venv/bin/python send.py \
                     --subject "SAAS Accounts Weekly & Quarterly Application Uptime Report" \
                     --to "${params.MAIL_TO}" \
-                    --cc "${params.MAIL_CC}"
+                    --cc "${params.MAIL_CC}" \
+                    --body output/uptime_report.html
                 """
             }
         }
@@ -51,6 +54,15 @@ pipeline {
             steps {
                 archiveArtifacts artifacts: 'output/*', fingerprint: true
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pipeline completed successfully'
+        }
+        failure {
+            echo '❌ Pipeline failed'
         }
     }
 }
