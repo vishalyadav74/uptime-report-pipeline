@@ -36,31 +36,21 @@ pipeline {
             }
         }
 
-        stage('Send Email (ITSM SMTP)') {
+        stage('Send Email') {
             steps {
                 sh """
                   ./venv/bin/python send.py \
                     --subject "SAAS Accounts Weekly & Quarterly Application Uptime Report" \
                     --to "${params.MAIL_TO}" \
-                    --cc "${params.MAIL_CC}" \
-                    --body output/uptime_report.html
+                    --cc "${params.MAIL_CC}"
                 """
             }
         }
 
         stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'output/uptime_report.html', fingerprint: true
+                archiveArtifacts artifacts: 'output/*', fingerprint: true
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully'
-        }
-        failure {
-            echo 'Pipeline failed'
         }
     }
 }
