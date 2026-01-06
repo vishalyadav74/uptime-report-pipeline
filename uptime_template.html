@@ -6,17 +6,19 @@
 
 <style>
 body{
-  font-family: Segoe UI, Arial, sans-serif;
+  font-family:Segoe UI,Arial,sans-serif;
   background:#f4f6f8;
   margin:0;
   padding:0;
+  font-size:13px;
+  line-height:1.6;
 }
 
 /* ===== TABLE ===== */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
-  font-size:12px;
+  font-size:13px;
 }
 
 .uptime-table th{
@@ -25,23 +27,18 @@ body{
   padding:10px;
   border:1px solid #ddd;
   text-align:left;
+  font-size:13px;
 }
 
 .uptime-table td{
   padding:9px 10px;
   border:1px solid #e5e5e5;
   vertical-align:top;
-  line-height:1.6;
+  font-size:13px;
 }
 
 .uptime-table tbody tr:nth-child(even){
   background:#fafafa;
-}
-
-/* Improve Remarks + RCA readability */
-.uptime-table td:last-child,
-.uptime-table td:nth-last-child(2){
-  font-size:12.5px;
 }
 
 /* ===== SECTION TITLE ===== */
@@ -51,6 +48,7 @@ body{
   font-weight:600;
   border-left:6px solid #e01e7e;
   margin-bottom:6px;
+  font-size:13px;
 }
 
 /* ===== INCIDENT CARD ===== */
@@ -58,41 +56,40 @@ body{
   background:#fff3f6;
   border-left:6px solid #e01e7e;
   padding:16px;
+  font-size:13px;
 }
 
 .incident-card h3{
-  margin:0 0 10px;
+  margin:0 0 8px 0;
   color:#e01e7e;
-  font-size:15px;
+  font-size:14px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- FULL WIDTH BACKGROUND -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
 <tr>
 <td>
 
-<!-- FULL WIDTH CONTENT -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
 
 <!-- HEADER -->
 <tr>
-<td style="background:#e01e7e;color:#ffffff;padding:26px 32px;">
-  <h1 style="margin:0;font-size:22px;font-weight:600;">
+<td style="background:#e01e7e;color:#ffffff;padding:22px 32px;">
+  <div style="font-size:18px;font-weight:600;">
     SaaS Accounts Application Uptime Report
-  </h1>
-  <p style="margin-top:6px;font-size:13px;opacity:.95;">
+  </div>
+  <div style="margin-top:4px;font-size:13px;">
     Weekly & Quarterly Availability Summary
-  </p>
+  </div>
 </td>
 </tr>
 
 <!-- INTRO -->
 <tr>
-<td style="padding:20px 32px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
+<td style="padding:18px 32px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
   Hi All,<br><br>
   Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
   along with remarks and RCA for any observed downtime.
@@ -106,12 +103,12 @@ body{
     <tr>
       <td>
         <h3>🚨 Major Incident of the Week</h3>
-        <p><b>Account:</b> {{ major_incident.account }}</p>
-        <p><b>Outage Downtime:</b> {{ major_incident.outage }}</p>
+        <div><b>Account:</b> {{ major_incident.account }}</div>
+        <div><b>Outage Downtime:</b> {{ major_incident.outage }}</div>
         {% if major_incident.rca %}
-        <p><b>RCA:</b> {{ major_incident.rca }}</p>
+        <div><b>RCA:</b> {{ major_incident.rca }}</div>
         {% endif %}
-        <p>{{ major_story | safe }}</p>
+        <div>{{ major_story | safe }}</div>
       </td>
     </tr>
   </table>
@@ -121,9 +118,7 @@ body{
 <!-- WEEKLY -->
 <tr>
 <td style="padding:20px 32px;">
-  <div class="section-title">
-    {{ weekly_title }}
-  </div>
+  <div class="section-title">{{ weekly_title }}</div>
   {{ weekly_table | safe }}
 </td>
 </tr>
@@ -132,31 +127,31 @@ body{
 {% if quarterly_table %}
 <tr>
 <td style="padding:20px 32px;">
-  <div class="section-title">
-    {{ quarterly_title }}
-  </div>
+  <div class="section-title">{{ quarterly_title }}</div>
   {{ quarterly_table | safe }}
 </td>
 </tr>
 {% endif %}
 
-<!-- FOOTER -->
+<!-- FOOTER / SIGNATURE -->
 <tr>
-<td style="padding:22px 32px;font-size:12px;border-top:1px solid #e5e5e5;">
-  For any production related incident and support, contact
-  <a href="mailto:incident@businessnext.com"
-     style="color:#e01e7e;text-decoration:none;">
+<td style="padding:18px 32px;border-top:1px solid #e5e5e5;font-size:13px;line-height:1.6;">
+  For any concern over above data, contact
+  <a href="mailto:incident@businessnext.com" style="color:#e01e7e;text-decoration:none;">
     incident@businessnext.com
   </a>
   <br><br>
 
   Best Regards,<br>
-  Atin Gambhir | Manager – ITSM (CDG)<br><br>
+  Atin Gambhir | Manager – ITSM (CDG)<br>
 
-  <img src="cid:businessnext_logo" width="90" style="display:block;border:0;"><br>
+  <img src="cid:businessnext_logo" width="90" style="display:block;margin-top:8px;border:0;">
 
-  <a href="https://www.businessnext.com">www.businessnext.com</a><br>
-  <b style="color:#e01e7e;">#UpForTomorrow</b>
+  <a href="https://www.businessnext.com" style="text-decoration:none;color:#000;">
+    www.businessnext.com
+  </a><br>
+
+  <span style="color:#e01e7e;font-weight:600;">#UpForTomorrow</span>
 </td>
 </tr>
 
