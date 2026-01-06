@@ -233,28 +233,11 @@ body{
 {{ weekly_table | safe }}
 </td></tr>
 
-<!-- QUARTERLY TABLE + DONUT -->
+<!-- QUARTERLY TABLE (NO CHART) -->
 {% if quarterly_table %}
 <tr><td class="section">
 <div class="section-header">{{ quarterly_title }}</div>
-
-<table width="100%" cellspacing="10" cellpadding="0">
-<tr>
-<td width="60%">
-  {{ quarterly_table | safe }}
-</td>
-
-<td width="40%" valign="top">
-  <div class="downtime-card">
-    <div class="downtime-title">Quarterly Downtime Breakdown</div>
-    <img src="cid:quarterly_downtime_chart"
-         width="180"
-         style="display:block;margin:auto;">
-  </div>
-</td>
-</tr>
-</table>
-
+{{ quarterly_table | safe }}
 </td></tr>
 {% endif %}
 
