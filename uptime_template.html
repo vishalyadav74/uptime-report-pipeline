@@ -2,164 +2,189 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>SaaS Uptime Report</title>
+<title>SaaS Accounts Application Uptime Report</title>
 
 <style>
 body{
-  font-family:Segoe UI,Arial,sans-serif;
-  background:#f4f6f8;
   margin:0;
   padding:0;
+  background:#f4f6f8;
+  font-family:Segoe UI,Arial,sans-serif;
   font-size:13px;
-  line-height:1.6;
+  color:#1f2937;
+}
+
+/* ===== COMMON ===== */
+.container{
+  width:100%;
+  background:#ffffff;
+}
+
+.section{
+  padding:18px 28px;
+}
+
+.title{
+  font-size:18px;
+  font-weight:600;
+}
+
+.subtitle{
+  font-size:13px;
+  color:#6b7280;
+  margin-top:4px;
+}
+
+/* ===== KPI CARDS ===== */
+.kpi-row{
+  width:100%;
+  margin-top:16px;
+}
+
+.kpi{
+  background:#f9fafb;
+  border-radius:6px;
+  padding:14px;
+}
+
+.kpi-value{
+  font-size:18px;
+  font-weight:700;
+}
+
+.green{ color:#16a34a; }
+.red{ color:#dc2626; }
+
+.kpi-label{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:4px;
+}
+
+/* ===== INCIDENT ===== */
+.incident{
+  background:#fff1f2;
+  border-left:6px solid #dc2626;
+  padding:14px;
+  border-radius:4px;
+}
+
+.incident-title{
+  font-weight:600;
+  color:#dc2626;
+  margin-bottom:8px;
 }
 
 /* ===== TABLE ===== */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
-  font-size:13px;
+  margin-top:10px;
 }
 
 .uptime-table th{
   background:#e01e7e;
   color:#ffffff;
   padding:10px;
-  border:1px solid #ddd;
+  font-size:12px;
   text-align:left;
 }
 
 .uptime-table td{
-  padding:9px 10px;
-  border:1px solid #e5e5e5;
-  vertical-align:top;
+  padding:9px;
+  border-bottom:1px solid #e5e7eb;
+  font-size:12px;
 }
 
-.uptime-table tbody tr:nth-child(even){
+.uptime-table tr:nth-child(even){
   background:#fafafa;
 }
 
-/* ===== SECTION TITLE ===== */
-.section-title{
-  background:#f1f1f1;
-  padding:10px 12px;
-  font-weight:600;
-  border-left:6px solid #e01e7e;
-  margin-bottom:6px;
+.tick{
+  color:#16a34a;
+  font-weight:700;
+  margin-right:4px;
 }
 
-/* ===== INCIDENT CARD ===== */
-.incident-card{
-  background:#fff3f6;
-  border-left:6px solid #e01e7e;
-  padding:16px;
-}
-
-.incident-card h3{
-  margin:0 0 8px 0;
-  color:#e01e7e;
-  font-size:14px;
-}
-
-/* ===== KPI CARD ===== */
-.kpi-card{
-  background:#f8fafc;
-  padding:14px;
-  border-radius:6px;
-  text-align:center;
-}
-.kpi-value{
-  font-size:18px;
-  font-weight:600;
+/* ===== FOOTER ===== */
+.footer{
+  border-top:1px solid #e5e7eb;
+  padding:18px 28px;
+  font-size:12px;
 }
 </style>
 </head>
 
 <body>
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
+<table width="100%" cellpadding="0" cellspacing="0">
 <tr>
-<td>
+<td align="center">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+<table width="100%" class="container">
 
 <!-- HEADER -->
 <tr>
-<td style="background:#e01e7e;color:#ffffff;padding:22px 32px;">
-  <div style="font-size:18px;font-weight:600;">
-    SaaS Accounts Application Uptime Report
+<td class="section">
+  <div class="title">SaaS Accounts Application Uptime Report</div>
+  <div class="subtitle">Weekly & Quarterly Availability Summary</div>
+</td>
+</tr>
+
+<!-- KPI -->
+<tr>
+<td class="section">
+<table width="100%" cellpadding="0" cellspacing="10" class="kpi-row">
+<tr>
+<td width="25%" class="kpi">
+  <div class="kpi-value green">✔ {{ overall_uptime }}</div>
+  <div class="kpi-label">Overall Uptime for the Week</div>
+</td>
+<td width="25%" class="kpi">
+  <div class="kpi-value red">{{ outage_count }}</div>
+  <div class="kpi-label">Outages</div>
+</td>
+<td width="25%" class="kpi">
+  <div class="kpi-value">{{ total_downtime }} mins</div>
+  <div class="kpi-label">Total Downtime</div>
+</td>
+<td width="25%" class="kpi">
+  <div class="kpi-value">{{ most_affected }}</div>
+  <div class="kpi-label">Most Affected Account</div>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<!-- INCIDENT + CHART -->
+<tr>
+<td class="section">
+<table width="100%" cellpadding="0" cellspacing="12">
+<tr>
+<td width="55%" valign="top">
+  <div class="incident">
+    <div class="incident-title">⚠ Major Incident of the Week</div>
+    <div><b>Account:</b> {{ major_incident.account }}</div>
+    <div><b>Outage Downtime:</b> {{ major_incident.outage }}</div>
+    {% if major_incident.rca %}
+    <div><b>RCA:</b> {{ major_incident.rca }}</div>
+    {% endif %}
   </div>
-  <div style="margin-top:4px;">
-    Weekly & Quarterly Availability Summary
-  </div>
+</td>
+
+<td width="45%" align="center">
+  <img src="cid:downtime_chart" width="260">
 </td>
 </tr>
-
-<!-- INTRO -->
-<tr>
-<td style="padding:18px 32px;background:#fafafa;border-bottom:1px solid #e5e5e5;">
-  Hi All,<br><br>
-  Please find below the <b>Application Uptime metrics</b> for all SaaS accounts
-  along with remarks and RCA for any observed downtime.
-</td>
-</tr>
-
-<!-- KPI SUMMARY -->
-<tr>
-<td style="padding:20px 32px;">
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td width="25%" class="kpi-card">
-        <div class="kpi-value" style="color:#16a34a;">{{ overall_uptime }}</div>
-        Overall Uptime
-      </td>
-      <td width="25%" class="kpi-card">
-        <div class="kpi-value" style="color:#dc2626;">{{ outage_count }}</div>
-        Outages
-      </td>
-      <td width="25%" class="kpi-card">
-        <div class="kpi-value" style="color:#ea580c;">{{ total_downtime }} mins</div>
-        Total Downtime
-      </td>
-      <td width="25%" class="kpi-card">
-        <div class="kpi-value" style="color:#7c3aed;">{{ most_affected }}</div>
-        Most Affected Account
-      </td>
-    </tr>
-  </table>
-</td>
-</tr>
-
-<!-- CHART -->
-<tr>
-<td style="padding:10px 32px;text-align:center;">
-  <img src="cid:downtime_chart" width="260" style="display:inline-block;">
-</td>
-</tr>
-
-<!-- MAJOR INCIDENT -->
-<tr>
-<td style="padding:20px 32px;">
-  <table width="100%" cellpadding="0" cellspacing="0" class="incident-card">
-    <tr>
-      <td>
-        <h3>🚨 Major Incident of the Week</h3>
-        <div><b>Account:</b> {{ major_incident.account }}</div>
-        <div><b>Outage Downtime:</b> {{ major_incident.outage }}</div>
-        {% if major_incident.rca %}
-        <div><b>RCA:</b> {{ major_incident.rca }}</div>
-        {% endif %}
-        <div>{{ major_story | safe }}</div>
-      </td>
-    </tr>
-  </table>
+</table>
 </td>
 </tr>
 
 <!-- WEEKLY -->
 <tr>
-<td style="padding:20px 32px;">
-  <div class="section-title">{{ weekly_title }}</div>
+<td class="section">
+  <b>{{ weekly_title }}</b>
   {{ weekly_table | safe }}
 </td>
 </tr>
@@ -167,36 +192,29 @@ body{
 <!-- QUARTERLY -->
 {% if quarterly_table %}
 <tr>
-<td style="padding:20px 32px;">
-  <div class="section-title">{{ quarterly_title }}</div>
+<td class="section">
+  <b>{{ quarterly_title }}</b>
   {{ quarterly_table | safe }}
 </td>
 </tr>
 {% endif %}
 
-<!-- FOOTER / SIGNATURE -->
+<!-- FOOTER -->
 <tr>
-<td style="padding:18px 32px;border-top:1px solid #e5e5e5;">
-  For any concern over above data, contact
-  <a href="mailto:incident@businessnext.com" style="color:#e01e7e;text-decoration:none;">
-    incident@businessnext.com
-  </a>
-  <br><br>
+<td class="footer">
+For any concern over above data, contact
+<a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
 
-  Best Regards,<br>
-  Atin Gambhir | Manager – ITSM (CDG)<br>
-
-  <img src="cid:businessnext_logo" width="90" style="display:block;margin-top:8px;border:0;">
-
-  <a href="https://www.businessnext.com" style="text-decoration:none;color:#000;">
-    www.businessnext.com
-  </a><br>
-
-  <span style="color:#e01e7e;font-weight:600;">#UpForTomorrow</span>
+Best Regards,<br>
+Atin Gambhir | Manager – ITSM (CDG)<br>
+<img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
+www.businessnext.com<br>
+<b style="color:#e01e7e;">#UpForTomorrow</b>
 </td>
 </tr>
 
 </table>
+
 </td>
 </tr>
 </table>
