@@ -15,87 +15,79 @@ body{
 }
 
 .container{ width:100%; background:#ffffff; }
-.section{ padding:12px 20px; }
+.section{ padding:10px 18px; }
 
-/* ---------- HEADER ---------- */
+/* ================= HEADER ================= */
 .header{
   background:#e01e7e;
   color:#ffffff;
-  padding:18px 22px;
+  padding:16px 20px;
 }
-.header-title{
-  font-size:18px;
-  font-weight:600;
-}
-.header-subtitle{
-  font-size:13px;
-  opacity:0.9;
-  margin-top:4px;
-}
+.header-title{ font-size:18px; font-weight:600; }
+.header-subtitle{ font-size:13px; opacity:.9; margin-top:4px; }
 
-/* ---------- KPI ---------- */
-.kpi-row{ width:100%; margin-top:10px; }
+/* ================= KPI ================= */
+.kpi-row{ width:100%; margin-top:8px; }
 .kpi{
   background:#f9fafb;
   border-radius:8px;
-  padding:12px;
+  padding:10px;
 }
-.kpi-value{
-  font-size:17px;
-  font-weight:700;
-}
-.kpi-green{ color:#16a34a; }
-.kpi-red{ color:#dc2626; }
-.kpi-orange{ color:#f59e0b; }
-.kpi-purple{ color:#7c3aed; }
-.kpi-label{
-  font-size:12px;
-  color:#6b7280;
-  margin-top:4px;
-}
+.kpi-value{ font-size:17px; font-weight:700; }
+.green{ color:#16a34a; }
+.red{ color:#dc2626; }
+.orange{ color:#f59e0b; }
+.purple{ color:#7c3aed; }
+.kpi-label{ font-size:12px; color:#6b7280; margin-top:2px; }
 
-/* ---------- INCIDENT ---------- */
+/* ================= INCIDENT ================= */
 .incident{
   background:#fff5f5;
   border-left:5px solid #ef4444;
-  padding:18px;
+  padding:14px;
   border-radius:6px;
-  min-height:120px;
-  line-height:1.7;
+  line-height:1.6;
 }
 .incident-title{
   font-weight:600;
   color:#dc2626;
-  margin-bottom:8px;
+  margin-bottom:6px;
 }
 
-/* ---------- DONUT ---------- */
+/* ================= DONUT ================= */
 .donut-box{
   background:#ffffff;
-  border-radius:8px;
-  padding:6px;
+  border-radius:10px;
+  padding:10px;
+  border:1px solid #e5e7eb;
   text-align:center;
 }
+.donut-note{
+  margin-top:6px;
+  font-size:12px;
+  font-weight:600;
+  color:#16a34a;
+}
 
-/* ---------- SECTION HEADER ---------- */
+/* ================= SECTION HEADERS ================= */
 .section-header{
-  margin:14px 0 6px;
+  margin:10px 0 4px;
   padding-left:8px;
   border-left:4px solid #e01e7e;
   font-weight:600;
-  color:#374151; /* dark grey */
+  color:#374151;
 }
 
-/* ---------- TABLE ---------- */
+/* ================= TABLE ================= */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
-  margin-top:6px;
+  margin-top:4px;
 }
 .uptime-table th,
 .uptime-table td{
   border:1px solid #e5e7eb;
-  padding:8px;
+  padding:7px;
   font-size:12px;
 }
 .uptime-table th{
@@ -107,23 +99,24 @@ body{
   background:#fafafa;
 }
 
+/* ✔ tick always green */
 .tick-circle{
   display:inline-block;
-  width:16px;
-  height:16px;
+  width:15px;
+  height:15px;
   border-radius:50%;
   background:#22c55e;
   color:#ffffff;
   font-size:11px;
-  line-height:16px;
+  line-height:15px;
   text-align:center;
   margin-right:6px;
 }
 
-/* ---------- FOOTER ---------- */
+/* ================= FOOTER ================= */
 .footer{
   border-top:1px solid #e5e7eb;
-  padding:14px 20px;
+  padding:14px 18px;
   font-size:12px;
 }
 </style>
@@ -149,19 +142,19 @@ body{
 <table width="100%" cellpadding="0" cellspacing="8" class="kpi-row">
 <tr>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-green">✔ {{ overall_uptime }}</div>
+  <div class="kpi-value green">✔ {{ overall_uptime }}</div>
   <div class="kpi-label">Overall Uptime for the Week</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-red">⚠ {{ outage_count }}</div>
+  <div class="kpi-value red">⚠ {{ outage_count }}</div>
   <div class="kpi-label">Outages</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-orange">⏱ {{ total_downtime }} mins</div>
+  <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
   <div class="kpi-label">Total Downtime</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-purple">🚩 {{ most_affected }}</div>
+  <div class="kpi-value purple">🚩 {{ most_affected }}</div>
   <div class="kpi-label">Most Affected Account</div>
 </td>
 </tr>
@@ -173,7 +166,7 @@ body{
 <table width="100%" cellpadding="0" cellspacing="8">
 <tr>
 
-<td width="60%" valign="top">
+<td width="62%" valign="top">
   <div class="incident">
     <div class="incident-title">🚨 Major Incident of the Week</div>
     <div><b>Account:</b> {{ major_incident.account }}</div>
@@ -184,9 +177,10 @@ body{
   </div>
 </td>
 
-<td width="40%" valign="top" align="center">
+<td width="38%" valign="top" align="center">
   <div class="donut-box">
-    <img src="cid:downtime_chart" width="220">
+    <img src="cid:downtime_chart" width="200" style="display:block;margin:auto;">
+    <div class="donut-note">{{ overall_uptime }}</div>
   </div>
 </td>
 
