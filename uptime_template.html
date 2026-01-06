@@ -27,8 +27,21 @@ body{
   border-radius:8px;
   padding:14px;
 }
-.kpi-value{ font-size:18px; font-weight:700; color:#16a34a; }
-.kpi-label{ font-size:12px; color:#6b7280; margin-top:4px; }
+
+.kpi-value{
+  font-size:18px;
+  font-weight:700;
+}
+.kpi-green{ color:#16a34a; }
+.kpi-red{ color:#dc2626; }
+.kpi-orange{ color:#f59e0b; }
+.kpi-purple{ color:#7c3aed; }
+
+.kpi-label{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:4px;
+}
 
 /* ---------- INCIDENT ---------- */
 .incident{
@@ -51,6 +64,7 @@ body{
   border-radius:10px;
   padding:14px;
   text-align:center;
+  position:relative;
 }
 .donut-center{
   position:absolute;
@@ -58,20 +72,21 @@ body{
   left:50%;
   transform:translate(-50%,-50%);
   text-align:center;
+  z-index:2;
 }
 .donut-circle{
-  width:54px;
-  height:54px;
+  width:56px;
+  height:56px;
   border-radius:50%;
   background:#22c55e;
   color:#ffffff;
   font-size:26px;
-  line-height:54px;
+  line-height:56px;
   margin:0 auto 6px;
   font-weight:700;
 }
 .donut-value{
-  font-size:14px;
+  font-size:15px;
   font-weight:700;
   color:#16a34a;
 }
@@ -136,19 +151,19 @@ body{
 <table width="100%" cellpadding="0" cellspacing="10" class="kpi-row">
 <tr>
 <td width="25%" class="kpi">
-  <div class="kpi-value">{{ overall_uptime }}</div>
+  <div class="kpi-value kpi-green">✔ {{ overall_uptime }}</div>
   <div class="kpi-label">Overall Uptime for the Week</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value">{{ outage_count }}</div>
+  <div class="kpi-value kpi-red">{{ outage_count }}</div>
   <div class="kpi-label">Outages</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value">{{ total_downtime }} mins</div>
+  <div class="kpi-value kpi-orange">{{ total_downtime }} mins</div>
   <div class="kpi-label">Total Downtime</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value">{{ most_affected }}</div>
+  <div class="kpi-value kpi-purple">{{ most_affected }}</div>
   <div class="kpi-label">Most Affected Account</div>
 </td>
 </tr>
@@ -172,7 +187,7 @@ body{
 </td>
 
 <td width="40%" valign="top" align="center">
-  <div class="donut-box" style="position:relative;">
+  <div class="donut-box">
     <img src="cid:downtime_chart" width="260">
     <div class="donut-center">
       <div class="donut-circle">✓</div>
