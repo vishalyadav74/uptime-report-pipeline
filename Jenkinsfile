@@ -33,12 +33,16 @@ pipeline {
         stage('Generate Report') {
             steps {
                 sh '''
+                  set -e
                   ./venv/bin/python generate_report.py
                 '''
             }
         }
 
         stage('Send Email') {
+            when {
+                expression { params.MAIL_TO?.trim() }
+            }
             steps {
                 sh """
                   ./venv/bin/python send.py \
