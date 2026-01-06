@@ -17,17 +17,29 @@ body{
 .container{ width:100%; background:#ffffff; }
 .section{ padding:18px 28px; }
 
-.title{ font-size:18px; font-weight:600; }
-.subtitle{ font-size:13px; color:#6b7280; margin-top:4px; }
+/* ---------- HEADER ---------- */
+.header{
+  background:#e01e7e;
+  color:#ffffff;
+  padding:22px 28px;
+}
+.header-title{
+  font-size:18px;
+  font-weight:600;
+}
+.header-subtitle{
+  font-size:13px;
+  opacity:0.9;
+  margin-top:4px;
+}
 
 /* ---------- KPI ---------- */
-.kpi-row{ width:100%; margin-top:14px; }
+.kpi-row{ width:100%; margin-top:16px; }
 .kpi{
   background:#f9fafb;
   border-radius:8px;
   padding:14px;
 }
-
 .kpi-value{
   font-size:18px;
   font-weight:700;
@@ -36,7 +48,6 @@ body{
 .kpi-red{ color:#dc2626; }
 .kpi-orange{ color:#f59e0b; }
 .kpi-purple{ color:#7c3aed; }
-
 .kpi-label{
   font-size:12px;
   color:#6b7280;
@@ -62,33 +73,8 @@ body{
 .donut-box{
   background:#ffffff;
   border-radius:10px;
-  padding:14px;
+  padding:10px;
   text-align:center;
-  position:relative;
-}
-.donut-center{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  text-align:center;
-  z-index:2;
-}
-.donut-circle{
-  width:56px;
-  height:56px;
-  border-radius:50%;
-  background:#22c55e;
-  color:#ffffff;
-  font-size:26px;
-  line-height:56px;
-  margin:0 auto 6px;
-  font-weight:700;
-}
-.donut-value{
-  font-size:15px;
-  font-weight:700;
-  color:#16a34a;
 }
 
 /* ---------- TABLE ---------- */
@@ -109,8 +95,9 @@ body{
   border-bottom:1px solid #e5e7eb;
   font-size:12px;
 }
-.uptime-table tr:nth-child(even){ background:#fafafa; }
-
+.uptime-table tr:nth-child(even){
+  background:#fafafa;
+}
 .tick-circle{
   display:inline-block;
   width:16px;
@@ -141,10 +128,12 @@ body{
 <table width="100%" class="container">
 
 <!-- HEADER -->
-<tr><td class="section">
-  <div class="title">SaaS Accounts Application Uptime Report</div>
-  <div class="subtitle">Weekly & Quarterly Availability Summary</div>
-</td></tr>
+<tr>
+<td class="header">
+  <div class="header-title">SaaS Accounts Application Uptime Report</div>
+  <div class="header-subtitle">Weekly & Quarterly Availability Summary</div>
+</td>
+</tr>
 
 <!-- KPI -->
 <tr><td class="section">
@@ -155,15 +144,15 @@ body{
   <div class="kpi-label">Overall Uptime for the Week</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-red">{{ outage_count }}</div>
+  <div class="kpi-value kpi-red">⚠ {{ outage_count }}</div>
   <div class="kpi-label">Outages</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-orange">{{ total_downtime }} mins</div>
+  <div class="kpi-value kpi-orange">⏱ {{ total_downtime }} mins</div>
   <div class="kpi-label">Total Downtime</div>
 </td>
 <td width="25%" class="kpi">
-  <div class="kpi-value kpi-purple">{{ most_affected }}</div>
+  <div class="kpi-value kpi-purple">🚩 {{ most_affected }}</div>
   <div class="kpi-label">Most Affected Account</div>
 </td>
 </tr>
@@ -188,11 +177,7 @@ body{
 
 <td width="40%" valign="top" align="center">
   <div class="donut-box">
-    <img src="cid:downtime_chart" width="260">
-    <div class="donut-center">
-      <div class="donut-circle">✓</div>
-      <div class="donut-value">{{ overall_uptime }}</div>
-    </div>
+    <img src="cid:downtime_chart" width="240">
   </div>
 </td>
 
