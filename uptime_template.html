@@ -13,105 +13,74 @@ body{
   font-size:13px;
   color:#1f2937;
 }
-
 .container{ width:100%; background:#ffffff; }
 .section{ padding:10px 18px; }
 
-/* HEADER */
 .header{
   background:#e01e7e;
-  color:#ffffff;
+  color:#fff;
   padding:16px 20px;
 }
 .header-title{ font-size:18px; font-weight:600; }
-.header-subtitle{ font-size:13px; opacity:.9; margin-top:4px; }
+.header-subtitle{ font-size:13px; opacity:.9; }
 
-/* KPI */
-.kpi-row{ margin-top:8px; }
-.kpi{
-  background:#f9fafb;
-  border-radius:8px;
-  padding:10px;
-}
+.kpi{ background:#f9fafb; border-radius:8px; padding:10px; }
 .kpi-value{ font-size:17px; font-weight:700; }
-.green{ color:#16a34a; }
-.red{ color:#dc2626; }
-.orange{ color:#f59e0b; }
-.purple{ color:#7c3aed; }
-.kpi-label{ font-size:12px; color:#6b7280; }
+.green{ color:#16a34a; } .red{ color:#dc2626; }
+.orange{ color:#f59e0b; } .purple{ color:#7c3aed; }
 
-/* INCIDENT */
 .incident{
   background:#fff5f5;
   border-left:5px solid #ef4444;
   padding:14px;
   border-radius:6px;
-  line-height:1.6;
-}
-.incident-title{
-  font-weight:600;
-  color:#dc2626;
-  margin-bottom:6px;
 }
 
-/* DONUT */
-.donut-box{
+.donut-card{
   background:#ffffff;
-  border-radius:10px;
-  padding:10px;
   border:1px solid #e5e7eb;
-}
-.donut-note{
-  margin-top:6px;
-  font-size:12px;
-  font-weight:600;
-  color:#16a34a;
+  border-radius:12px;
+  padding:14px;
   text-align:center;
 }
 
-/* SECTION HEADERS */
+.donut-title{
+  font-weight:600;
+  margin-bottom:8px;
+}
+
 .section-header{
   margin:10px 0 4px;
   padding-left:8px;
   border-left:4px solid #e01e7e;
   font-weight:600;
-  color:#374151;
 }
 
-/* TABLE */
 .uptime-table{
   width:100%;
   border-collapse:collapse;
 }
-.uptime-table th,
-.uptime-table td{
+.uptime-table th, .uptime-table td{
   border:1px solid #e5e7eb;
   padding:7px;
   font-size:12px;
 }
-.uptime-table th{
-  background:#e01e7e;
-  color:#ffffff;
-}
-.uptime-table tr:nth-child(even){
-  background:#fafafa;
-}
+.uptime-table th{ background:#e01e7e; color:#fff; }
+.uptime-table tr:nth-child(even){ background:#fafafa; }
 
-/* GREEN TICK */
 .tick-circle{
   display:inline-block;
   width:15px;
   height:15px;
   border-radius:50%;
   background:#22c55e;
-  color:#ffffff;
+  color:#fff;
   font-size:11px;
   line-height:15px;
   text-align:center;
   margin-right:6px;
 }
 
-/* FOOTER */
 .footer{
   border-top:1px solid #e5e7eb;
   padding:14px 18px;
@@ -121,26 +90,21 @@ body{
 </head>
 
 <body>
-
-<table width="100%">
-<tr><td>
-
+<table width="100%"><tr><td>
 <table class="container" width="100%">
 
-<tr>
-<td class="header">
+<tr><td class="header">
   <div class="header-title">SaaS Accounts Application Uptime Report</div>
   <div class="header-subtitle">Weekly & Quarterly Availability Summary</div>
-</td>
-</tr>
+</td></tr>
 
 <tr><td class="section">
-<table width="100%" cellspacing="8" class="kpi-row">
+<table width="100%" cellspacing="8">
 <tr>
-<td class="kpi"><div class="kpi-value green">✔ {{ overall_uptime }}</div><div class="kpi-label">Overall Uptime</div></td>
-<td class="kpi"><div class="kpi-value red">⚠ {{ outage_count }}</div><div class="kpi-label">Outages</div></td>
-<td class="kpi"><div class="kpi-value orange">⏱ {{ total_downtime }} mins</div><div class="kpi-label">Downtime</div></td>
-<td class="kpi"><div class="kpi-value purple">🚩 {{ most_affected }}</div><div class="kpi-label">Most Affected</div></td>
+<td class="kpi"><div class="kpi-value green">✔ {{ overall_uptime }}</div>Overall Uptime</td>
+<td class="kpi"><div class="kpi-value red">⚠ {{ outage_count }}</div>Outages</td>
+<td class="kpi"><div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>Downtime</td>
+<td class="kpi"><div class="kpi-value purple">🚩 {{ most_affected }}</div>Affected</td>
 </tr>
 </table>
 </td></tr>
@@ -148,21 +112,21 @@ body{
 <tr><td class="section">
 <table width="100%" cellspacing="8">
 <tr>
-<td width="62%">
+<td width="60%">
 <div class="incident">
-  <div class="incident-title">🚨 Major Incident of the Week</div>
-  <b>Account:</b> {{ major_incident.account }}<br>
-  <b>Outage:</b> {{ major_incident.outage }}<br>
-  {% if major_incident.rca %}
-  <b>RCA:</b> {{ major_incident.rca }}
-  {% endif %}
+<b>🚨 Major Incident of the Week</b><br><br>
+<b>Account:</b> {{ major_incident.account }}<br>
+<b>Outage:</b> {{ major_incident.outage }}<br>
+{% if major_incident.rca %}
+<b>RCA:</b> {{ major_incident.rca }}
+{% endif %}
 </div>
 </td>
 
-<td width="38%" align="center">
-<div class="donut-box">
-  <img src="cid:downtime_chart" width="200">
-  <div class="donut-note">{{ overall_uptime }}</div>
+<td width="40%">
+<div class="donut-card">
+  <div class="donut-title">Weekly Downtime Breakdown</div>
+  <img src="cid:downtime_chart" width="190">
 </div>
 </td>
 </tr>
@@ -185,13 +149,13 @@ body{
 For any concern contact
 <a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
 Best Regards,<br>
-Atin Gambhir | Manager – ITSM (CDG)
+Atin Gambhir | Manager – ITSM (CDG) <br>
+  <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
+www.businessnext.com<br>
+<b style="color:#e01e7e;">#UpForTomorrow</b>
 </td></tr>
 
 </table>
-
-</td></tr>
-</table>
-
+</td></tr></table>
 </body>
 </html>
