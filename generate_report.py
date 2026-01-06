@@ -4,16 +4,11 @@ import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-# -------------------------------------------------
-# PATHS
-# -------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# -------------------------------------------------
-# PICK LATEST DATED EXCEL
-# -------------------------------------------------
+# ---------------- PICK LATEST EXCEL ----------------
 def extract_date(name):
     m = re.search(r'(\d{1,2})(st|nd|rd|th)\s+([A-Za-z]+)\s*_?\s*(\d{4})', name)
     if not m:
@@ -36,9 +31,7 @@ def find_excel():
 EXCEL_FILE = find_excel()
 print("📊 Using Excel:", EXCEL_FILE)
 
-# -------------------------------------------------
-# HELPERS
-# -------------------------------------------------
+# ---------------- HELPERS ----------------
 def downtime_to_minutes(txt):
     if not txt:
         return 0
@@ -50,12 +43,10 @@ def downtime_to_minutes(txt):
         mins += int(m.group(1))
     return mins
 
-# -------------------------------------------------
-# READ SHEET
-# -------------------------------------------------
-def read_sheet(sheet_name):
+# ---------------- READ SHEET ----------------
+def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb[sheet_name]
+    ws = wb[sheet]
 
     title = ws["A1"].value or ""
     headers = [str(c.value).strip() if c.value else "" for c in ws[2]]
@@ -68,9 +59,6 @@ def read_sheet(sheet_name):
 
     return title, headers, rows
 
-# -------------------------------------------------
-# LOAD DATA
-# -------------------------------------------------
 wb = load_workbook(EXCEL_FILE, data_only=True)
 weekly_title, headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
@@ -78,15 +66,13 @@ quarterly_title, quarterly_rows = "", []
 if len(wb.sheetnames) > 1:
     quarterly_title, _, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# -------------------------------------------------
-# HEADER INDEX
-# -------------------------------------------------
-norm_headers = [h.lower() for h in headers]
+# ---------------- HEADER INDEX ----------------
+norm = [h.lower() for h in headers]
 
 def idx(*names):
     for n in names:
-        if n.lower() in norm_headers:
-            return norm_headers.index(n.lower())
+        if n.lower() in norm:
+            return norm.index(n.lower())
     return None
 
 IDX_ACCOUNT = idx("account name", "account")
@@ -94,9 +80,7 @@ IDX_UPTIME  = idx("total uptime", "uptime")
 IDX_OUTAGE  = idx("outage downtime")
 IDX_RCA     = idx("rca of outage")
 
-# -------------------------------------------------
-# NORMALIZE UPTIME
-# -------------------------------------------------
+# ---------------- NORMALIZE UPTIME ----------------
 def normalize(rows):
     values = []
     for r in rows:
@@ -113,14 +97,8 @@ def normalize(rows):
 weekly_uptimes = normalize(weekly_rows)
 normalize(quarterly_rows)
 
-# -------------------------------------------------
-# KPIs
-# -------------------------------------------------
-overall_uptime = (
-    f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-    if weekly_uptimes else "N/A"
-)
-
+# ---------------- KPIs ----------------
+overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
 total_downtime = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
 outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[IDX_OUTAGE]) > 0)
 
@@ -133,9 +111,7 @@ major_incident = {
     "rca": major_row[IDX_RCA] if IDX_RCA is not None else ""
 }
 
-# -------------------------------------------------
-# BUILD TABLE (ALL GREEN ✔)
-# -------------------------------------------------
+# ---------------- BUILD TABLE ----------------
 def build_table(headers, rows):
     html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
@@ -154,13 +130,13 @@ def build_table(headers, rows):
     html += "</tbody></table>"
     return html
 
-weekly_table    = build_table(headers, weekly_rows)
+weekly_table = build_table(headers, weekly_rows)
 quarterly_table = build_table(headers, quarterly_rows) if quarterly_rows else ""
 
-# -------------------------------------------------
-# DONUT CHART (ONLY OUTAGE ACCOUNTS)
-# -------------------------------------------------
+# ---------------- DONUT (EXACT STYLE) ----------------
 labels, values = [], []
+total = sum(downtime_to_minutes(r[IDX_OUTAGE]) for r in weekly_rows)
+
 for r in weekly_rows:
     mins = downtime_to_minutes(r[IDX_OUTAGE])
     if mins > 0:
@@ -171,19 +147,19 @@ if values:
     plt.figure(figsize=(4,4))
     plt.pie(
         values,
-        labels=labels,
         startangle=90,
-        wedgeprops=dict(width=0.35),
-        autopct="%1.1f%%"
+        wedgeprops=dict(width=0.32),
+        autopct="%1.1f%%",
+        pctdistance=0.78
     )
     plt.text(0, 0, overall_uptime, ha="center", va="center",
-             fontsize=12, weight="bold")
-    plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"))
+             fontsize=14, fontweight="bold")
+    plt.axis('equal')
+    plt.savefig(os.path.join(OUTPUT_DIR, "downtime_chart.png"),
+                bbox_inches="tight", pad_inches=0.05)
     plt.close()
 
-# -------------------------------------------------
-# RENDER HTML
-# -------------------------------------------------
+# ---------------- RENDER ----------------
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
