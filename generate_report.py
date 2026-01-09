@@ -4,16 +4,12 @@ import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-# =================================================
-# PATHS
-# =================================================
+# ================= PATHS =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# =================================================
-# PICK LATEST EXCEL
-# =================================================
+# ================= PICK LATEST EXCEL =================
 def extract_date(name):
     m = re.search(
         r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
@@ -40,9 +36,7 @@ def find_excel():
 EXCEL_FILE = find_excel()
 print("📊 Using Excel:", EXCEL_FILE)
 
-# =================================================
-# HELPERS
-# =================================================
+# ================= HELPERS =================
 def downtime_to_minutes(txt):
     if not txt:
         return 0
@@ -54,9 +48,7 @@ def downtime_to_minutes(txt):
         mins += int(m.group(1))
     return mins
 
-# =================================================
-# READ SHEET (NO EXTRA COLUMNS)
-# =================================================
+# ================= READ SHEET =================
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet]
@@ -73,9 +65,7 @@ def read_sheet(sheet):
 
     return title, headers, rows
 
-# =================================================
-# LOAD DATA
-# =================================================
+# ================= LOAD DATA =================
 wb = load_workbook(EXCEL_FILE, data_only=True)
 
 weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
@@ -84,9 +74,7 @@ quarterly_title, quarterly_headers, quarterly_rows = "", [], []
 if len(wb.sheetnames) > 1:
     quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# =================================================
-# INDEX HELPERS
-# =================================================
+# ================= INDEX HELPERS =================
 def build_index(headers):
     norm = [h.lower() for h in headers]
     def idx(*names):
@@ -96,23 +84,17 @@ def build_index(headers):
         return None
     return idx
 
-# Weekly
 w = build_index(weekly_headers)
 W_ACC = w("account name", "account")
 W_UP  = w("total uptime", "uptime")
 W_OUT = w("outage downtime")
-W_RCA = w("rca of outage")
 
-# Quarterly
 q = build_index(quarterly_headers)
 Q_ACC = q("account name", "account")
 Q_UP  = q("total uptime", "uptime")
 Q_YTD = q("ytd uptime", "ytd")
-Q_OUT = q("outage downtime")
 
-# =================================================
-# NORMALIZE
-# =================================================
+# ================= NORMALIZE =================
 def normalize_pct(val):
     try:
         v = float(val)
@@ -125,47 +107,46 @@ def normalize_pct(val):
 weekly_uptimes = []
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    try:
-        weekly_uptimes.append(float(r[W_UP].replace("%","")))
-    except:
-        pass
+    weekly_uptimes.append(float(r[W_UP].replace("%","")))
 
 for r in quarterly_rows:
     r[Q_UP] = normalize_pct(r[Q_UP])
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-# =================================================
-# KPIs
-# =================================================
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
+# ================= KPIs =================
+overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
-outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
+outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
-major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
-major_incident = {
-    "account": major_row[W_ACC],
-    "outage": major_row[W_OUT],
-    "rca": major_row[W_RCA] if W_RCA is not None else ""
-}
+# ================= WEEKLY UPTIME PIE =================
+labels = [r[W_ACC] for r in weekly_rows]
+values = [float(r[W_UP].replace("%","")) for r in weekly_rows]
 
-# =================================================
-# WEEKLY BREAKDOWN
-# =================================================
-breakdown = []
-total_weekly_outage = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
+plt.figure(figsize=(4.5,4.5))
+plt.pie(
+    values,
+    labels=labels,
+    startangle=90,
+    autopct="%1.1f%%",
+    wedgeprops=dict(width=0.32),
+    pctdistance=0.78
+)
+plt.text(
+    0, 0,
+    overall_uptime,
+    ha="center", va="center",
+    fontsize=14, fontweight="bold"
+)
+plt.axis("equal")
+plt.savefig(
+    os.path.join(OUTPUT_DIR, "downtime_chart.png"),
+    bbox_inches="tight",
+    pad_inches=0.05
+)
+plt.close()
 
-for r in weekly_rows:
-    mins = downtime_to_minutes(r[W_OUT])
-    if mins > 0:
-        breakdown.append({
-            "account": r[W_ACC],
-            "percent": f"{(mins/total_weekly_outage)*100:.1f}%"
-        })
-
-# =================================================
-# TABLE BUILDER (✔ LOGIC)
-# =================================================
+# ================= TABLE BUILDER =================
 def build_table(headers, rows, uptime_idx, ytd_idx=None):
     html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
@@ -179,7 +160,7 @@ def build_table(headers, rows, uptime_idx, ytd_idx=None):
                 html += f"<td><span class='tick-circle'>✔</span>{v}</td>"
             elif ytd_idx is not None and i == ytd_idx:
                 try:
-                    if float(v.replace("%","")) >= 99:
+                    if float(v.replace('%','')) >= 99:
                         html += f"<td><span class='tick-circle'>✔</span>{v}</td>"
                     else:
                         html += f"<td>{v}</td>"
@@ -192,49 +173,10 @@ def build_table(headers, rows, uptime_idx, ytd_idx=None):
     html += "</tbody></table>"
     return html
 
-weekly_table = build_table(weekly_headers, weekly_rows, W_UP)
+weekly_table    = build_table(weekly_headers, weekly_rows, W_UP)
 quarterly_table = build_table(quarterly_headers, quarterly_rows, Q_UP, Q_YTD)
 
-# =================================================
-# DONUTS
-# =================================================
-def make_donut(rows, acc_idx, out_idx, center_text, out_file):
-    labels, values = [], []
-    for r in rows:
-        mins = downtime_to_minutes(r[out_idx])
-        if mins > 0:
-            labels.append(r[acc_idx])
-            values.append(mins)
-
-    if not values:
-        return
-
-    plt.figure(figsize=(4,4))
-    plt.pie(values, startangle=90,
-            wedgeprops=dict(width=0.32),
-            autopct="%1.1f%%", pctdistance=0.78)
-    plt.text(0,0, center_text, ha="center", va="center",
-             fontsize=14, fontweight="bold")
-    plt.axis("equal")
-    plt.savefig(os.path.join(OUTPUT_DIR, out_file),
-                bbox_inches="tight", pad_inches=0.05)
-    plt.close()
-
-make_donut(weekly_rows, W_ACC, W_OUT, overall_uptime, "downtime_chart.png")
-
-if quarterly_rows:
-    q_avg = []
-    for r in quarterly_rows:
-        try:
-            q_avg.append(float(r[Q_UP].replace("%","")))
-        except:
-            pass
-    q_center = f"{sum(q_avg)/len(q_avg):.2f}%" if q_avg else ""
-    make_donut(quarterly_rows, Q_ACC, Q_OUT, q_center, "quarterly_downtime_chart.png")
-
-# =================================================
-# RENDER HTML
-# =================================================
+# ================= RENDER =================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
@@ -245,9 +187,7 @@ html = template.render(
     quarterly_table=quarterly_table,
     overall_uptime=overall_uptime,
     outage_count=outage_count,
-    total_downtime=total_downtime,
-    major_incident=major_incident,
-    breakdown=breakdown
+    total_downtime=total_downtime
 )
 
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
