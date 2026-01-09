@@ -94,12 +94,6 @@ def read_sheet(sheet):
 wb = load_workbook(EXCEL_FILE, data_only=True)
 weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
-quarterly_title, quarterly_headers, quarterly_rows = "", [], []
-if len(wb.sheetnames) > 1:
-    quarterly_title, quarterly_headers, quarterly_rows = read_sheet(
-        wb.sheetnames[1]
-    )
-
 # =================================================
 # INDEX HELPERS
 # =================================================
@@ -121,9 +115,10 @@ W_UP = w("total uptime", "uptime")
 W_OUT = w("outage downtime")
 
 # =================================================
-# NORMALIZE
+# NORMALIZE + KPI
 # =================================================
 weekly_uptimes = []
+downtime_map = {}
 
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
@@ -132,32 +127,59 @@ for r in weekly_rows:
     except:
         pass
 
+    downtime_map[r[W_ACC]] = downtime_to_minutes(r[W_OUT])
+
 overall_uptime = (
     f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
     if weekly_uptimes else "N/A"
 )
 
-outage_count = sum(
-    1 for r in weekly_rows
-    if downtime_to_minutes(r[W_OUT]) > 0
+outage_count = sum(1 for v in downtime_map.values() if v > 0)
+total_downtime = sum(downtime_map.values())
+
+most_affected = (
+    max(downtime_map, key=downtime_map.get)
+    if downtime_map else "N/A"
 )
 
-total_downtime = sum(
-    downtime_to_minutes(r[W_OUT]) for r in weekly_rows
+# =================================================
+# BAR GRAPH – WEEKLY UPTIME
+# =================================================
+def make_bar_chart(rows, acc_idx, up_idx, out_file):
+    accounts = []
+    uptimes = []
+
+    for r in rows:
+        try:
+            accounts.append(r[acc_idx])
+            uptimes.append(float(r[up_idx].replace("%", "")))
+        except:
+            pass
+
+    if not uptimes:
+        return
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(accounts, uptimes)
+    plt.ylim(90, 100)
+    plt.ylabel("Uptime (%)")
+    plt.xticks(rotation=25, ha="right")
+    plt.title("Weekly Uptime by Account")
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(OUTPUT_DIR, out_file))
+    plt.close()
+
+
+make_bar_chart(
+    weekly_rows,
+    W_ACC,
+    W_UP,
+    "uptime_bar.png"
 )
 
 # =================================================
-# WEEKLY BREAKDOWN (UPTIME)
-# =================================================
-breakdown = []
-for r in weekly_rows:
-    breakdown.append({
-        "account": r[W_ACC],
-        "percent": r[W_UP]
-    })
-
-# =================================================
-# TABLE BUILDER
+# TABLE
 # =================================================
 def build_table(headers, rows, uptime_idx):
     html = "<table class='uptime-table'><thead><tr>"
@@ -179,58 +201,9 @@ def build_table(headers, rows, uptime_idx):
 
 
 weekly_table = build_table(
-    weekly_headers, weekly_rows, W_UP
-)
-
-# =================================================
-# DONUT CHART (UPTIME BY ACCOUNT)
-# =================================================
-def make_donut(rows, acc_idx, up_idx, center_text, out_file):
-    labels, values = [], []
-
-    for r in rows:
-        try:
-            values.append(float(r[up_idx].replace("%", "")))
-            labels.append(r[acc_idx])
-        except:
-            pass
-
-    if not values:
-        return
-
-    plt.figure(figsize=(5, 5))
-    plt.pie(
-        values,
-        startangle=90,
-        wedgeprops=dict(width=0.35),
-        autopct="%1.1f%%",
-        pctdistance=0.8
-    )
-
-    plt.text(
-        0, 0,
-        center_text,
-        ha="center",
-        va="center",
-        fontsize=14,
-        fontweight="bold"
-    )
-
-    plt.axis("equal")
-    plt.savefig(
-        os.path.join(OUTPUT_DIR, out_file),
-        bbox_inches="tight",
-        pad_inches=0.05
-    )
-    plt.close()
-
-
-make_donut(
+    weekly_headers,
     weekly_rows,
-    W_ACC,
-    W_UP,
-    overall_uptime,
-    "downtime_chart.png"
+    W_UP
 )
 
 # =================================================
@@ -245,7 +218,7 @@ html = template.render(
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
-    breakdown=breakdown
+    most_affected=most_affected
 )
 
 out = os.path.join(OUTPUT_DIR, "uptime_report.html")
