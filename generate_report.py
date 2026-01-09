@@ -4,12 +4,16 @@ import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-# ================= PATHS =================
+# =================================================
+# PATHS
+# =================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ================= PICK LATEST EXCEL =================
+# =================================================
+# PICK LATEST EXCEL
+# =================================================
 def extract_date(name):
     m = re.search(
         r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
@@ -36,7 +40,9 @@ def find_excel():
 EXCEL_FILE = find_excel()
 print("📊 Using Excel:", EXCEL_FILE)
 
-# ================= HELPERS =================
+# =================================================
+# HELPERS
+# =================================================
 def downtime_to_minutes(txt):
     if not txt:
         return 0
@@ -48,7 +54,18 @@ def downtime_to_minutes(txt):
         mins += int(m.group(1))
     return mins
 
-# ================= READ SHEET =================
+def normalize_pct(val):
+    try:
+        v = float(val)
+        if v <= 1:
+            v *= 100
+        return f"{v:.2f}%"
+    except:
+        return val
+
+# =================================================
+# READ SHEET (NO EXTRA COLUMNS)
+# =================================================
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet]
@@ -65,16 +82,19 @@ def read_sheet(sheet):
 
     return title, headers, rows
 
-# ================= LOAD DATA =================
+# =================================================
+# LOAD DATA
+# =================================================
 wb = load_workbook(EXCEL_FILE, data_only=True)
-
 weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
 
 quarterly_title, quarterly_headers, quarterly_rows = "", [], []
 if len(wb.sheetnames) > 1:
     quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# ================= INDEX HELPERS =================
+# =================================================
+# INDEX HELPERS
+# =================================================
 def build_index(headers):
     norm = [h.lower() for h in headers]
     def idx(*names):
@@ -94,59 +114,35 @@ Q_ACC = q("account name", "account")
 Q_UP  = q("total uptime", "uptime")
 Q_YTD = q("ytd uptime", "ytd")
 
-# ================= NORMALIZE =================
-def normalize_pct(val):
-    try:
-        v = float(val)
-        if v <= 1:
-            v *= 100
-        return f"{v:.2f}%"
-    except:
-        return val
-
+# =================================================
+# NORMALIZE
+# =================================================
 weekly_uptimes = []
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    weekly_uptimes.append(float(r[W_UP].replace("%","")))
+    try:
+        weekly_uptimes.append(float(r[W_UP].replace("%","")))
+    except:
+        pass
 
 for r in quarterly_rows:
     r[Q_UP] = normalize_pct(r[Q_UP])
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-# ================= KPIs =================
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+# =================================================
+# KPIs
+# =================================================
+overall_uptime = (
+    f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
-outage_count   = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
+outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
-# ================= WEEKLY UPTIME PIE =================
-labels = [r[W_ACC] for r in weekly_rows]
-values = [float(r[W_UP].replace("%","")) for r in weekly_rows]
-
-plt.figure(figsize=(4.5,4.5))
-plt.pie(
-    values,
-    labels=labels,
-    startangle=90,
-    autopct="%1.1f%%",
-    wedgeprops=dict(width=0.32),
-    pctdistance=0.78
-)
-plt.text(
-    0, 0,
-    overall_uptime,
-    ha="center", va="center",
-    fontsize=14, fontweight="bold"
-)
-plt.axis("equal")
-plt.savefig(
-    os.path.join(OUTPUT_DIR, "downtime_chart.png"),
-    bbox_inches="tight",
-    pad_inches=0.05
-)
-plt.close()
-
-# ================= TABLE BUILDER =================
+# =================================================
+# TABLE BUILDER (✔ LOGIC)
+# =================================================
 def build_table(headers, rows, uptime_idx, ytd_idx=None):
     html = "<table class='uptime-table'><thead><tr>"
     for h in headers:
@@ -173,10 +169,33 @@ def build_table(headers, rows, uptime_idx, ytd_idx=None):
     html += "</tbody></table>"
     return html
 
-weekly_table    = build_table(weekly_headers, weekly_rows, W_UP)
+weekly_table = build_table(weekly_headers, weekly_rows, W_UP)
 quarterly_table = build_table(quarterly_headers, quarterly_rows, Q_UP, Q_YTD)
 
-# ================= RENDER =================
+# =================================================
+# YTD PIE CHART (Quarterly)
+# =================================================
+labels, values = [], []
+for r in quarterly_rows:
+    try:
+        labels.append(r[Q_ACC])
+        values.append(float(r[Q_YTD].replace("%","")))
+    except:
+        pass
+
+if values:
+    plt.figure(figsize=(4,4))
+    plt.pie(values, startangle=90, wedgeprops=dict(width=0.32))
+    plt.text(0,0,"YTD Uptime", ha="center", va="center",
+             fontsize=13, fontweight="bold")
+    plt.axis("equal")
+    plt.savefig(os.path.join(OUTPUT_DIR, "quarterly_downtime_chart.png"),
+                bbox_inches="tight", pad_inches=0.05)
+    plt.close()
+
+# =================================================
+# RENDER
+# =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
