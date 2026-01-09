@@ -1,8 +1,6 @@
 from openpyxl import load_workbook
 from jinja2 import Template
-import os
-import glob
-import re
+import os, glob, re
 from datetime import datetime
 import matplotlib.pyplot as plt
 
@@ -92,7 +90,14 @@ def read_sheet(sheet):
 # LOAD DATA
 # =================================================
 wb = load_workbook(EXCEL_FILE, data_only=True)
+
 weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
+
+quarterly_title, quarterly_headers, quarterly_rows = "", [], []
+if len(wb.sheetnames) > 1:
+    quarterly_title, quarterly_headers, quarterly_rows = read_sheet(
+        wb.sheetnames[1]
+    )
 
 # =================================================
 # INDEX HELPERS
@@ -115,7 +120,7 @@ W_UP = w("total uptime", "uptime")
 W_OUT = w("outage downtime")
 
 # =================================================
-# NORMALIZE + KPI
+# KPI CALCULATION
 # =================================================
 weekly_uptimes = []
 downtime_map = {}
@@ -126,7 +131,6 @@ for r in weekly_rows:
         weekly_uptimes.append(float(r[W_UP].replace("%", "")))
     except:
         pass
-
     downtime_map[r[W_ACC]] = downtime_to_minutes(r[W_OUT])
 
 overall_uptime = (
@@ -136,18 +140,13 @@ overall_uptime = (
 
 outage_count = sum(1 for v in downtime_map.values() if v > 0)
 total_downtime = sum(downtime_map.values())
-
-most_affected = (
-    max(downtime_map, key=downtime_map.get)
-    if downtime_map else "N/A"
-)
+most_affected = max(downtime_map, key=downtime_map.get) if downtime_map else "N/A"
 
 # =================================================
-# BAR GRAPH – WEEKLY UPTIME
+# BAR GRAPH (FIXED)
 # =================================================
 def make_bar_chart(rows, acc_idx, up_idx, out_file):
-    accounts = []
-    uptimes = []
+    accounts, uptimes = [], []
 
     for r in rows:
         try:
@@ -159,14 +158,13 @@ def make_bar_chart(rows, acc_idx, up_idx, out_file):
     if not uptimes:
         return
 
-    plt.figure(figsize=(7, 4))
+    plt.figure(figsize=(8, 4))
     plt.bar(accounts, uptimes)
     plt.ylim(90, 100)
     plt.ylabel("Uptime (%)")
     plt.xticks(rotation=25, ha="right")
     plt.title("Weekly Uptime by Account")
     plt.tight_layout()
-
     plt.savefig(os.path.join(OUTPUT_DIR, out_file))
     plt.close()
 
@@ -179,7 +177,7 @@ make_bar_chart(
 )
 
 # =================================================
-# TABLE
+# TABLE BUILDER
 # =================================================
 def build_table(headers, rows, uptime_idx):
     html = "<table class='uptime-table'><thead><tr>"
@@ -200,10 +198,10 @@ def build_table(headers, rows, uptime_idx):
     return html
 
 
-weekly_table = build_table(
-    weekly_headers,
-    weekly_rows,
-    W_UP
+weekly_table = build_table(weekly_headers, weekly_rows, W_UP)
+quarterly_table = (
+    build_table(quarterly_headers, quarterly_rows, None)
+    if quarterly_rows else ""
 )
 
 # =================================================
@@ -214,7 +212,9 @@ with open("uptime_template.html", encoding="utf-8") as f:
 
 html = template.render(
     weekly_title=weekly_title,
+    quarterly_title=quarterly_title,
     weekly_table=weekly_table,
+    quarterly_table=quarterly_table,
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
