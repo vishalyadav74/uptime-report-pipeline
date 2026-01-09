@@ -92,6 +92,7 @@ body{
 <tr><td align="center">
 <table class="container">
 
+<!-- HEADER -->
 <tr>
   <td class="header">
     <div class="header-title">SaaS Accounts Application Uptime Report</div>
@@ -127,11 +128,15 @@ body{
 </td>
 </tr>
 
-<!-- BAR GRAPH -->
+<!-- BAR GRAPH (EMAIL SAFE – BASE64) -->
 <tr>
 <td class="section">
   <div class="section-header">Weekly Uptime by Account</div>
-  <img src="cid:uptime_bar" width="100%" style="max-width:700px;">
+  <img
+    src="data:image/png;base64,{{ bar_chart }}"
+    width="100%"
+    style="max-width:700px; display:block; margin:auto;"
+  >
 </td>
 </tr>
 
@@ -143,7 +148,17 @@ body{
 </td>
 </tr>
 
-<!-- FOOTER / SIGNATURE (RESTORED) -->
+<!-- QUARTERLY TABLE (RESTORED) -->
+{% if quarterly_table %}
+<tr>
+<td class="section">
+  <div class="section-header">{{ quarterly_title }}</div>
+  {{ quarterly_table | safe }}
+</td>
+</tr>
+{% endif %}
+
+<!-- FOOTER / SIGNATURE -->
 <tr>
 <td class="footer">
   For any concern over above data contact
