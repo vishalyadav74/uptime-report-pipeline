@@ -87,54 +87,44 @@ def idx(headers, *names):
 W_ACC = idx(weekly_headers, "account", "account name")
 W_UP  = idx(weekly_headers, "uptime", "total uptime")
 W_OUT = idx(weekly_headers, "outage downtime")
-W_RCA = idx(weekly_headers, "rca")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
-Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI CALC
+# KPI
 # =================================================
 weekly_uptimes = []
-
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    try:
-        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
-    except:
-        pass
+    weekly_uptimes.append(float(r[W_UP].replace("%", "")))
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
+overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
 # =================================================
-# 🔴 WEEKLY OUTAGES (DESC ORDER)
+# 🔴 WEEKLY OUTAGES (DESC)
 # =================================================
-weekly_outages = sorted(
-    [
-        {"account": r[W_ACC], "mins": downtime_to_minutes(r[W_OUT])}
-        for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0
-    ],
-    key=lambda x: x["mins"],
-    reverse=True
-)
+weekly_outages = []
+for r in weekly_rows:
+    mins = downtime_to_minutes(r[W_OUT])
+    if mins > 0:
+        weekly_outages.append({"account": r[W_ACC], "mins": mins})
+
+weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# 🔴 QUARTERLY OUTAGES (DESC ORDER)
+# 🔴 QUARTERLY OUTAGES (DESC)
 # =================================================
 quarterly_outages = []
-if Q_OUT is not None:
-    quarterly_outages = sorted(
-        [
-            {"account": r[Q_ACC], "mins": downtime_to_minutes(r[Q_OUT])}
-            for r in quarterly_rows if downtime_to_minutes(r[Q_OUT]) > 0
-        ],
-        key=lambda x: x["mins"],
-        reverse=True
-    )
+if quarterly_rows and Q_OUT is not None:
+    for r in quarterly_rows:
+        mins = downtime_to_minutes(r[Q_OUT])
+        if mins > 0:
+            quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
+    quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
 # BAR GRAPH
@@ -147,10 +137,10 @@ def bar_base64(accounts, values, label):
     ax.set_yticklabels(accounts)
     ax.set_xlim(0, 100)
     ax.set_xlabel(label)
-    plt.tight_layout()
     buf = BytesIO()
+    plt.tight_layout()
     plt.savefig(buf, format="png")
-    plt.close(fig)
+    plt.close()
     return base64.b64encode(buf.getvalue()).decode()
 
 weekly_bar = bar_base64(
@@ -163,12 +153,12 @@ quarterly_bar = ""
 if quarterly_rows and Q_YTD is not None:
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
-        [float(normalize_pct(r[Q_YTD]).replace("%", "")) for r in quarterly_rows],
+        [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
         "YTD Uptime (%)"
     )
 
 # =================================================
-# RENDER HTML
+# RENDER
 # =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
