@@ -112,26 +112,28 @@
 </td>
 </tr>
 
-<!-- ================= QUARTERLY KPI (ADD-ON) ================= -->
+<!-- ================= QUARTERLY KPI ================= -->
 <tr>
 <td class="section">
 <table width="100%" cellspacing="8">
 <tr>
   <td class="kpi">
     <div class="kpi-value green">✔ {{ quarterly_overall_uptime }}</div>
-    Quarterly Avg Uptime
+    Overall Uptime Avg
   </td>
   <td class="kpi">
     <div class="kpi-value red">⚠ {{ quarterly_outage_count }}</div>
-    Quarterly Outages
+    Outages
   </td>
   <td class="kpi">
-    <div class="kpi-value purple">🚩 {{ quarterly_major_account }}</div>
+    <div class="kpi-value purple">
+      🚩 {{ quarterly_major_incident.account if quarterly_major_incident else 'N/A' }}
+    </div>
     Most Affected Account
   </td>
   <td class="kpi">
     <div class="kpi-value orange">⏱ {{ quarterly_total_downtime }} mins</div>
-    Quarterly Downtime
+    Outage Downtime
   </td>
 </tr>
 </table>
@@ -153,6 +155,7 @@
 </td>
 
 <td width="30%" valign="top" align="center">
+
   <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
 
   <div style="display:flex;justify-content:center;gap:60px;">
@@ -184,6 +187,7 @@
       <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
     {% endif %}
   </div>
+
 </td>
 </tr>
 </table>
@@ -214,6 +218,7 @@
 </td>
 
 <td width="30%" valign="top" align="center">
+
   <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
 
   <div style="display:flex;justify-content:center;gap:60px;">
@@ -245,6 +250,7 @@
       <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
     {% endif %}
   </div>
+
 </td>
 </tr>
 </table>
