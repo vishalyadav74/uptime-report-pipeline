@@ -16,16 +16,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # PICK LATEST EXCEL
 # =================================================
 def extract_date(name):
-    m = re.search(
-        r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
-        name, re.IGNORECASE
-    )
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})', name)
     if not m:
         return None
-    return datetime.strptime(
-        f"{m.group(1)} {m.group(3)} {m.group(4)}",
-        "%d %b %Y"
-    )
+    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
 
 def find_excel():
     files = glob.glob("*.xlsx")
@@ -38,6 +32,15 @@ EXCEL_FILE = find_excel()
 # =================================================
 # HELPERS
 # =================================================
+def normalize_pct(val):
+    try:
+        v = float(val)
+        if v <= 1:
+            v *= 100
+        return f"{v:.2f}%"
+    except:
+        return val
+
 def downtime_to_minutes(txt):
     if not txt:
         return 0
@@ -48,15 +51,6 @@ def downtime_to_minutes(txt):
     if m := re.search(r'(\d+)\s*min', txt):
         mins += int(m.group(1))
     return mins
-
-def normalize_pct(val):
-    try:
-        v = float(val)
-        if v <= 1:
-            v *= 100
-        return f"{v:.2f}%"
-    except:
-        return val
 
 # =================================================
 # READ SHEET
@@ -80,9 +74,6 @@ quarterly_title, quarterly_headers, quarterly_rows = "", [], []
 if len(wb.sheetnames) > 1:
     quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
 
-# =================================================
-# INDEX
-# =================================================
 def idx(headers, *names):
     h = [x.lower() for x in headers]
     for n in names:
@@ -98,24 +89,17 @@ Q_ACC = idx(quarterly_headers, "account", "account name")
 Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 
-# =================================================
-# NORMALIZE + KPI
-# =================================================
-weekly_uptimes = []
-
+weekly_vals = []
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    try:
-        weekly_uptimes.append(float(r[W_UP].replace("%","")))
-    except:
-        pass
+    weekly_vals.append(float(r[W_UP].replace("%","")))
 
 for r in quarterly_rows:
     r[Q_UP] = normalize_pct(r[Q_UP])
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
+overall_uptime = f"{sum(weekly_vals)/len(weekly_vals):.2f}%"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -127,44 +111,40 @@ major_incident = {
 }
 
 # =================================================
-# BAR GRAPH – ACCOUNT WISE COLORS (FINAL)
+# INFOGRAPHIC STYLE BAR (FINAL)
 # =================================================
-def bar_base64(accounts, values, ylabel):
-    fig, ax = plt.subplots(figsize=(7,3))
+def infographic_bar(accounts, values, xlabel):
+    fig, ax = plt.subplots(figsize=(7, 0.6 * len(accounts)))
 
-    palette = [
-        "#2563eb", "#16a34a", "#f59e0b", "#dc2626",
-        "#7c3aed", "#0d9488", "#db2777", "#ca8a04",
-        "#0284c7", "#9333ea", "#65a30d", "#ea580c"
-    ]
-    colors = [palette[i % len(palette)] for i in range(len(values))]
+    palette = ["#7c3aed","#ec4899","#0ea5e9","#2563eb",
+               "#14b8a6","#22c55e","#f59e0b","#ef4444"]
 
-    bars = ax.bar(accounts, values, color=colors)
+    y = range(len(accounts))
 
-    min_val = min(values)
-    ax.set_ylim(max(0, min_val - 1), 100)
+    ax.barh(y, [100]*len(accounts), color="#e5e7eb", height=0.55)
+    bars = ax.barh(y, values, color=[palette[i%len(palette)] for i in y], height=0.55)
 
-    ax.set_ylabel(ylabel)
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
-    plt.xticks(rotation=30, ha="right")
+    for i, bar in enumerate(bars):
+        ax.text(values[i] + 0.4, bar.get_y()+bar.get_height()/2,
+                f"{values[i]:.2f}%", va="center", fontsize=9, fontweight="bold")
 
-    for bar, val in zip(bars, values):
-        ax.text(
-            bar.get_x() + bar.get_width()/2,
-            val + 0.02,
-            f"{val:.2f}%",
-            ha="center",
-            va="bottom",
-            fontsize=8
-        )
+    ax.set_yticks(y)
+    ax.set_yticklabels(accounts)
+    ax.set_xlim(0,100)
+    ax.invert_yaxis()
+    ax.set_xlabel(xlabel)
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(left=False, bottom=False)
 
     plt.tight_layout()
     buf = BytesIO()
-    plt.savefig(buf, format="png")
+    plt.savefig(buf, format="png", dpi=120)
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_bar = bar_base64(
+weekly_bar = infographic_bar(
     [r[W_ACC] for r in weekly_rows],
     [float(r[W_UP].replace("%","")) for r in weekly_rows],
     "Uptime (%)"
@@ -172,15 +152,12 @@ weekly_bar = bar_base64(
 
 quarterly_bar = ""
 if quarterly_rows and Q_YTD is not None:
-    quarterly_bar = bar_base64(
+    quarterly_bar = infographic_bar(
         [r[Q_ACC] for r in quarterly_rows],
         [float(r[Q_YTD].replace("%","")) for r in quarterly_rows],
         "YTD Uptime (%)"
     )
 
-# =================================================
-# TABLE BUILDER
-# =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
     for h in headers:
@@ -196,9 +173,6 @@ def build_table(headers, rows):
 weekly_table = build_table(weekly_headers, weekly_rows)
 quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
-# =================================================
-# RENDER HTML
-# =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
