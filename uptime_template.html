@@ -63,6 +63,7 @@
       color: #ffffff;
     }
 
+    /* 🔴 OUTAGES BOARD (STATIC – EMAIL SAFE) */
     .outage-board {
       border: 3px solid #dc2626;
       background: #ffffff;
@@ -76,7 +77,7 @@
     .outage-title {
       color: #dc2626;
       font-weight: 800;
-      font-size: 18px;
+      font-size: 16px;
       letter-spacing: 1px;
       margin-bottom: 6px;
     }
@@ -139,21 +140,21 @@
 <tr>
 
 <td width="70%">
-<img src="data:image/png;base64,{{ weekly_bar }}" width="100%">
+  <img src="data:image/png;base64,{{ weekly_bar }}" width="100%">
 </td>
 
 <td width="30%" align="center">
-<div class="outage-board">
-  <div class="outage-title">🔴 OUTAGES</div>
-  <hr>
-  {% if weekly_outages %}
-    {% for o in weekly_outages %}
-      <div><b>{{ o.account }}</b> – {{ o.mins }} mins</div>
-    {% endfor %}
-  {% else %}
-    <div class="green">✔ No Outages</div>
-  {% endif %}
-</div>
+  <div class="outage-board">
+    <div class="outage-title">🔴 OUTAGES</div>
+    <hr>
+    {% if weekly_outages %}
+      {% for o in weekly_outages %}
+        <div><b>{{ o.account }}</b> – {{ o.mins }} mins</div>
+      {% endfor %}
+    {% else %}
+      <div class="green">✔ No Outages</div>
+    {% endif %}
+  </div>
 </td>
 
 </tr>
@@ -179,21 +180,21 @@
 <tr>
 
 <td width="70%">
-<img src="data:image/png;base64,{{ quarterly_bar }}" width="100%">
+  <img src="data:image/png;base64,{{ quarterly_bar }}" width="100%">
 </td>
 
 <td width="30%" align="center">
-<div class="outage-board">
-  <div class="outage-title">🔴 OUTAGES</div>
-  <hr>
-  {% if quarterly_outages %}
-    {% for o in quarterly_outages %}
-      <div><b>{{ o.account }}</b> – {{ o.mins }} mins</div>
-    {% endfor %}
-  {% else %}
-    <div class="green">✔ No Outages</div>
-  {% endif %}
-</div>
+  <div class="outage-board">
+    <div class="outage-title">🔴 OUTAGES</div>
+    <hr>
+    {% if quarterly_outages %}
+      {% for o in quarterly_outages %}
+        <div><b>{{ o.account }}</b> – {{ o.mins }} mins</div>
+      {% endfor %}
+    {% else %}
+      <div class="green">✔ No Outages</div>
+    {% endif %}
+  </div>
 </td>
 
 </tr>
