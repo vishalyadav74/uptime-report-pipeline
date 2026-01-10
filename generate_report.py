@@ -49,15 +49,6 @@ def downtime_to_minutes(txt):
         mins += int(m.group(1))
     return mins
 
-def normalize_pct(val):
-    try:
-        v = float(val)
-        if v <= 1:
-            v *= 100
-        return f"{v:.2f}%"
-    except:
-        return val
-
 # =================================================
 # READ SHEET
 # =================================================
@@ -99,36 +90,33 @@ Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 
 # =================================================
-# ✅ FIXED NORMALIZATION + CORRECT AVERAGE
+# ✅ CORRECT WEEKLY AVERAGE (NO ROUNDING)
 # =================================================
 weekly_uptimes = []
 
 for r in weekly_rows:
     raw = r[W_UP]
-
     try:
-        val = float(raw)
+        val = float(str(raw).replace("%", "").strip())
         if val <= 1:
             val *= 100
+        val = float(val)
     except:
-        try:
-            val = float(str(raw).replace("%", "").strip())
-        except:
-            continue
+        continue
 
     r[W_UP] = f"{val:.2f}%"
     weekly_uptimes.append(val)
 
-for r in quarterly_rows:
-    r[Q_UP] = normalize_pct(r[Q_UP])
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
+if weekly_uptimes:
+    avg = sum(weekly_uptimes) / len(weekly_uptimes)
+    avg_truncated = int(avg * 100) / 100  # NO rounding
+    overall_uptime = f"{avg_truncated:.2f}%"
+else:
+    overall_uptime = "N/A"
 
-overall_uptime = (
-    f"{sum(weekly_uptimes) / len(weekly_uptimes):.2f}%"
-    if weekly_uptimes else "N/A"
-)
-
+# =================================================
+# KPI
+# =================================================
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -140,7 +128,7 @@ major_incident = {
 }
 
 # =================================================
-# INFOGRAPHIC BAR GRAPH (UNCHANGED)
+# INFOGRAPHIC BAR GRAPH
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
