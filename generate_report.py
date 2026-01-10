@@ -127,40 +127,48 @@ major_incident = {
 }
 
 # =================================================
-# BAR GRAPH – ACCOUNT WISE COLORS (FINAL)
+# INFOGRAPHIC STYLE BAR GRAPH (ONLY CHANGE)
 # =================================================
 def bar_base64(accounts, values, ylabel):
-    fig, ax = plt.subplots(figsize=(7,3))
+    fig, ax = plt.subplots(figsize=(8, 3.5))
+    y_pos = range(len(accounts))
+
+    # background (100%)
+    ax.barh(y_pos, [100]*len(values), color="#e5e7eb", height=0.6)
 
     palette = [
-        "#2563eb", "#16a34a", "#f59e0b", "#dc2626",
-        "#7c3aed", "#0d9488", "#db2777", "#ca8a04",
-        "#0284c7", "#9333ea", "#65a30d", "#ea580c"
+        "#ef4444", "#f59e0b", "#fde047",
+        "#10b981", "#3b82f6", "#6366f1",
+        "#8b5cf6", "#ec4899", "#14b8a6",
+        "#84cc16", "#f97316"
     ]
     colors = [palette[i % len(palette)] for i in range(len(values))]
 
-    bars = ax.bar(accounts, values, color=colors)
+    bars = ax.barh(y_pos, values, color=colors, height=0.6)
 
-    min_val = min(values)
-    ax.set_ylim(max(0, min_val - 1), 100)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(accounts)
+    ax.set_xlim(0, 100)
+    ax.set_xlabel(ylabel)
 
-    ax.set_ylabel(ylabel)
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
-    plt.xticks(rotation=30, ha="right")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
 
     for bar, val in zip(bars, values):
         ax.text(
-            bar.get_x() + bar.get_width()/2,
-            val + 0.02,
+            val + 1,
+            bar.get_y() + bar.get_height()/2,
             f"{val:.2f}%",
-            ha="center",
-            va="bottom",
-            fontsize=8
+            va="center",
+            fontsize=9,
+            fontweight="600"
         )
 
     plt.tight_layout()
     buf = BytesIO()
-    plt.savefig(buf, format="png")
+    plt.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
