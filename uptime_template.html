@@ -106,34 +106,40 @@
             </td>
           </tr>
 
-          <!-- KPI SECTION -->
+          <!-- KPI SECTION (FIXED SEQUENCE) -->
           <tr>
             <td class="section">
               <table width="100%" cellspacing="8" cellpadding="0">
                 <tr>
+
+                  <!-- 1 -->
                   <td class="kpi">
                     <div class="kpi-value green">✔ {{ overall_uptime }}</div>
-                    Overall Uptime
+                    Overall Uptime Avg
                   </td>
 
+                  <!-- 2 -->
                   <td class="kpi">
                     <div class="kpi-value red">⚠ {{ outage_count }}</div>
                     Outages
                   </td>
 
-                  <td class="kpi">
-                    <div class="kpi-value orange">
-                      ⏱ {{ total_downtime }} mins
-                    </div>
-                    Downtime
-                  </td>
-
+                  <!-- 3 -->
                   <td class="kpi">
                     <div class="kpi-value purple">
                       🚩 {{ major_incident.account or 'N/A' }}
                     </div>
-                    Most Affected
+                    Most Affected Account
                   </td>
+
+                  <!-- 4 -->
+                  <td class="kpi">
+                    <div class="kpi-value orange">
+                      ⏱ {{ total_downtime }} mins
+                    </div>
+                    Outage Downtime
+                  </td>
+
                 </tr>
               </table>
             </td>
