@@ -112,7 +112,7 @@
 </td>
 </tr>
 
-<!-- WEEKLY BAR + CLOSED BOARD -->
+<!-- WEEKLY BAR + OUTAGES BOARD -->
 <tr>
 <td class="section">
 <div class="section-header">Weekly Uptime by Account</div>
@@ -127,7 +127,7 @@
        style="max-width:700px;display:block;">
 </td>
 
-<!-- CLOSED BOARD -->
+<!-- OUTAGES BOARD -->
 <td width="30%" valign="top" align="center">
 
   <!-- rope -->
@@ -144,14 +144,10 @@
   ">
 
     <div style="color:#dc2626;font-weight:700;font-size:14px;">
-      🔴 CLOSED
+      🔴 OUTAGES
     </div>
 
-    <div style="color:#991b1b;font-size:12px;margin-bottom:6px;">
-      Outages This Week
-    </div>
-
-    <hr style="border:none;border-top:1px solid #fecaca;">
+    <hr style="border:none;border-top:1px solid #fecaca;margin:6px 0;">
 
     {% if weekly_outages %}
       {% for o in weekly_outages %}
