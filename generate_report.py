@@ -115,11 +115,7 @@ for r in quarterly_rows:
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-overall_uptime = (
-    f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-    if weekly_uptimes else "N/A"
-)
-
+overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -131,19 +127,17 @@ major_incident = {
 }
 
 # =================================================
-# BAR GRAPH (FIXED – DYNAMIC SCALE + COLORS)
+# BAR GRAPH – ACCOUNT WISE COLORS (FINAL)
 # =================================================
-def bar_base64(accounts, values, title, ylabel):
+def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(7,3))
 
-    colors = []
-    for v in values:
-        if v < 99:
-            colors.append("#ef4444")   # red
-        elif v < 99.5:
-            colors.append("#f59e0b")   # orange
-        else:
-            colors.append("#2563eb")   # blue
+    palette = [
+        "#2563eb", "#16a34a", "#f59e0b", "#dc2626",
+        "#7c3aed", "#0d9488", "#db2777", "#ca8a04",
+        "#0284c7", "#9333ea", "#65a30d", "#ea580c"
+    ]
+    colors = [palette[i % len(palette)] for i in range(len(values))]
 
     bars = ax.bar(accounts, values, color=colors)
 
@@ -151,22 +145,20 @@ def bar_base64(accounts, values, title, ylabel):
     ax.set_ylim(max(0, min_val - 1), 100)
 
     ax.set_ylabel(ylabel)
-    ax.set_title(title, fontsize=11, fontweight="bold")
     ax.grid(axis="y", linestyle="--", alpha=0.4)
     plt.xticks(rotation=30, ha="right")
 
     for bar, val in zip(bars, values):
         ax.text(
             bar.get_x() + bar.get_width()/2,
-            val + 0.05,
+            val + 0.02,
             f"{val:.2f}%",
             ha="center",
             va="bottom",
-            fontsize=9
+            fontsize=8
         )
 
     plt.tight_layout()
-
     buf = BytesIO()
     plt.savefig(buf, format="png")
     plt.close(fig)
@@ -175,7 +167,6 @@ def bar_base64(accounts, values, title, ylabel):
 weekly_bar = bar_base64(
     [r[W_ACC] for r in weekly_rows],
     [float(r[W_UP].replace("%","")) for r in weekly_rows],
-    "Weekly Uptime by Account",
     "Uptime (%)"
 )
 
@@ -184,7 +175,6 @@ if quarterly_rows and Q_YTD is not None:
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
         [float(r[Q_YTD].replace("%","")) for r in quarterly_rows],
-        "Quarterly YTD Uptime by Account",
         "YTD Uptime (%)"
     )
 
