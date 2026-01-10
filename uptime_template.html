@@ -57,18 +57,6 @@ body{
   background:#e01e7e;
   color:#fff;
 }
-.tick-circle{
-  display:inline-block;
-  width:15px;
-  height:15px;
-  border-radius:50%;
-  background:#22c55e;
-  color:#fff;
-  font-size:11px;
-  line-height:15px;
-  text-align:center;
-  margin-right:6px;
-}
 
 .footer{
   border-top:1px solid #e5e7eb;
@@ -119,14 +107,14 @@ body{
 </td>
 </tr>
 
-<!-- WEEKLY DONUT -->
+<!-- WEEKLY BAR GRAPH -->
 <tr>
 <td class="section">
-  <div class="section-header">Weekly Downtime Overview</div>
+  <div class="section-header">Weekly Uptime by Account</div>
   <img
-    src="data:image/png;base64,{{ weekly_donut }}"
-    width="160"
-    style="display:block;margin:auto;"
+    src="data:image/png;base64,{{ weekly_bar }}"
+    width="100%"
+    style="max-width:700px;display:block;margin:auto;"
   >
 </td>
 </tr>
@@ -139,15 +127,15 @@ body{
 </td>
 </tr>
 
-<!-- QUARTERLY DONUT -->
-{% if quarterly_donut %}
+<!-- QUARTERLY BAR GRAPH -->
+{% if quarterly_bar %}
 <tr>
 <td class="section">
-  <div class="section-header">Quarterly Downtime Overview</div>
+  <div class="section-header">Quarterly YTD Uptime by Account</div>
   <img
-    src="data:image/png;base64,{{ quarterly_donut }}"
-    width="160"
-    style="display:block;margin:auto;"
+    src="data:image/png;base64,{{ quarterly_bar }}"
+    width="100%"
+    style="max-width:700px;display:block;margin:auto;"
   >
 </td>
 </tr>
