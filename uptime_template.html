@@ -86,7 +86,7 @@
 </td>
 </tr>
 
-<!-- KPI -->
+<!-- ================= WEEKLY KPI ================= -->
 <tr>
 <td class="section">
 <table width="100%" cellspacing="8">
@@ -112,6 +112,32 @@
 </td>
 </tr>
 
+<!-- ================= QUARTERLY KPI (ADD-ON) ================= -->
+<tr>
+<td class="section">
+<table width="100%" cellspacing="8">
+<tr>
+  <td class="kpi">
+    <div class="kpi-value green">✔ {{ quarterly_overall_uptime }}</div>
+    Quarterly Avg Uptime
+  </td>
+  <td class="kpi">
+    <div class="kpi-value red">⚠ {{ quarterly_outage_count }}</div>
+    Quarterly Outages
+  </td>
+  <td class="kpi">
+    <div class="kpi-value purple">🚩 {{ quarterly_major_account }}</div>
+    Most Affected Account
+  </td>
+  <td class="kpi">
+    <div class="kpi-value orange">⏱ {{ quarterly_total_downtime }} mins</div>
+    Quarterly Downtime
+  </td>
+</tr>
+</table>
+</td>
+</tr>
+
 <!-- ================= WEEKLY ================= -->
 <tr>
 <td class="section">
@@ -127,17 +153,13 @@
 </td>
 
 <td width="30%" valign="top" align="center">
-
-  <!-- PIN -->
   <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
 
-  <!-- ROPES -->
   <div style="display:flex;justify-content:center;gap:60px;">
     <div style="width:2px;height:22px;background:#9ca3af;"></div>
     <div style="width:2px;height:22px;background:#9ca3af;"></div>
   </div>
 
-  <!-- BOARD -->
   <div style="
     margin-top:-2px;
     transform:rotate(-4deg);
@@ -162,7 +184,6 @@
       <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
     {% endif %}
   </div>
-
 </td>
 </tr>
 </table>
@@ -193,7 +214,6 @@
 </td>
 
 <td width="30%" valign="top" align="center">
-
   <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
 
   <div style="display:flex;justify-content:center;gap:60px;">
@@ -225,7 +245,6 @@
       <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
     {% endif %}
   </div>
-
 </td>
 </tr>
 </table>
