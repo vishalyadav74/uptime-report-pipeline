@@ -16,10 +16,16 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # PICK LATEST EXCEL
 # =================================================
 def extract_date(name):
-    m = re.search(r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})', name, re.I)
+    m = re.search(
+        r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
+        name, re.IGNORECASE
+    )
     if not m:
         return None
-    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+    return datetime.strptime(
+        f"{m.group(1)} {m.group(3)} {m.group(4)}",
+        "%d %b %Y"
+    )
 
 def find_excel():
     files = glob.glob("*.xlsx")
@@ -87,60 +93,110 @@ def idx(headers, *names):
 W_ACC = idx(weekly_headers, "account", "account name")
 W_UP  = idx(weekly_headers, "uptime", "total uptime")
 W_OUT = idx(weekly_headers, "outage downtime")
+W_RCA = idx(weekly_headers, "rca")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
+Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI
+# NORMALIZE + KPI
 # =================================================
 weekly_uptimes = []
+
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+    try:
+        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+    except:
+        pass
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+for r in quarterly_rows:
+    r[Q_UP] = normalize_pct(r[Q_UP])
+    if Q_YTD is not None:
+        r[Q_YTD] = normalize_pct(r[Q_YTD])
+
+overall_uptime = (
+    f"{sum(weekly_uptimes) / len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
+
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
+major_incident = {"account": "N/A", "outage": "", "rca": ""}
+if weekly_rows:
+    major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
+    major_incident = {
+        "account": major_row[W_ACC],
+        "outage": major_row[W_OUT],
+        "rca": major_row[W_RCA] if W_RCA is not None else ""
+    }
+
 # =================================================
-# 🔴 WEEKLY OUTAGES (DESC)
+# 🔴 WEEKLY OUTAGES (DESC ORDER)
 # =================================================
 weekly_outages = []
 for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
-        weekly_outages.append({"account": r[W_ACC], "mins": mins})
+        weekly_outages.append({
+            "account": r[W_ACC],
+            "mins": mins
+        })
 
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# 🔴 QUARTERLY OUTAGES (DESC)
+# 🔴 QUARTERLY OUTAGES (DESC ORDER)
 # =================================================
 quarterly_outages = []
 if quarterly_rows and Q_OUT is not None:
     for r in quarterly_rows:
         mins = downtime_to_minutes(r[Q_OUT])
         if mins > 0:
-            quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
+            quarterly_outages.append({
+                "account": r[Q_ACC],
+                "mins": mins
+            })
+
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
 # BAR GRAPH
 # =================================================
-def bar_base64(accounts, values, label):
+def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
-    y = range(len(accounts))
-    ax.barh(y, values)
-    ax.set_yticks(y)
+    y_pos = range(len(accounts))
+
+    ax.barh(y_pos, [100] * len(values), color="#e5e7eb", height=0.6)
+    bars = ax.barh(y_pos, values, height=0.6)
+
+    ax.set_yticks(y_pos)
     ax.set_yticklabels(accounts)
     ax.set_xlim(0, 100)
-    ax.set_xlabel(label)
+    ax.set_xlabel(ylabel)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+
+    for bar, val in zip(bars, values):
+        ax.text(
+            val + 1,
+            bar.get_y() + bar.get_height() / 2,
+            f"{val:.2f}%",
+            va="center",
+            fontsize=9,
+            fontweight="600"
+        )
+
     buf = BytesIO()
     plt.tight_layout()
-    plt.savefig(buf, format="png")
-    plt.close()
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
 weekly_bar = bar_base64(
@@ -158,7 +214,35 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# RENDER
+# TABLE BUILDER
+# =================================================
+def build_table(headers, rows):
+    html = "<table class='uptime-table'><tr>"
+    for h in headers:
+        html += f"<th>{h}</th>"
+    html += "</tr>"
+
+    for r in rows:
+        html += "<tr>"
+        for h, v in zip(headers, r):
+            cell = v
+            if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
+                cell = (
+                    "<span style='display:inline-block;"
+                    "padding:2px 8px;border-radius:999px;"
+                    "background:#dcfce7;color:#16a34a;"
+                    "font-weight:600;font-size:11px;'>"
+                    f"✔ {v}</span>"
+                )
+            html += f"<td>{cell}</td>"
+        html += "</tr>"
+    return html + "</table>"
+
+weekly_table = build_table(weekly_headers, weekly_rows)
+quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
+
+# =================================================
+# RENDER HTML
 # =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
@@ -166,13 +250,16 @@ with open("uptime_template.html", encoding="utf-8") as f:
 html = template.render(
     weekly_title=weekly_title,
     quarterly_title=quarterly_title,
+    weekly_table=weekly_table,
+    quarterly_table=quarterly_table,
+    overall_uptime=overall_uptime,
+    outage_count=outage_count,
+    total_downtime=total_downtime,
+    major_incident=major_incident,
     weekly_bar=weekly_bar,
     quarterly_bar=quarterly_bar,
     weekly_outages=weekly_outages,
-    quarterly_outages=quarterly_outages,
-    overall_uptime=overall_uptime,
-    outage_count=outage_count,
-    total_downtime=total_downtime
+    quarterly_outages=quarterly_outages
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
