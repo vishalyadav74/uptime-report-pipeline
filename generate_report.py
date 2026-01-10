@@ -207,7 +207,7 @@ def build_table(headers, rows):
                     "padding:2px 8px;"
                     "border-radius:999px;"
                     "background:#dcfce7;"
-                    "color:#15803d;"
+                    "color:#16a34a;"
                     "font-weight:600;"
                     "font-size:11px;"
                     "'>"
