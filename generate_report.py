@@ -188,7 +188,7 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# ✅ TABLE BUILDER – GREEN BADGE PERCENTAGE
+# ✅ TABLE BUILDER – DARK GREEN BADGE + ✔
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -206,12 +206,12 @@ def build_table(headers, rows):
                     "display:inline-block;"
                     "padding:2px 8px;"
                     "border-radius:999px;"
-                    "background:#dcfce7;"
-                    "color:#15803d;"
+                    "background:#166534;"
+                    "color:#ffffff;"
                     "font-weight:600;"
                     "font-size:11px;"
                     "'>"
-                    f"{v}"
+                    f"✔ {v}"
                     "</span>"
                 )
             html += f"<td>{cell}</td>"
