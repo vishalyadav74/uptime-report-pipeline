@@ -84,36 +84,35 @@ def idx(headers, *names):
             return h.index(n.lower())
     return None
 
-W_ACC = idx(weekly_headers, "account")
-W_UP  = idx(weekly_headers, "uptime")
+W_ACC = idx(weekly_headers, "account", "account name")
+W_UP  = idx(weekly_headers, "uptime", "total uptime")
 W_OUT = idx(weekly_headers, "outage downtime")
 
-Q_ACC = idx(quarterly_headers, "account")
-Q_YTD = idx(quarterly_headers, "ytd")
+Q_ACC = idx(quarterly_headers, "account", "account name")
+Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
 # WEEKLY KPI
 # =================================================
-weekly_uptimes = [float(normalize_pct(r[W_UP]).replace("%","")) for r in weekly_rows]
+weekly_uptimes = []
+for r in weekly_rows:
+    r[W_UP] = normalize_pct(r[W_UP])
+    weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
-major_incident = max(
-    weekly_rows,
-    key=lambda r: downtime_to_minutes(r[W_OUT]),
-    default=None
-)
-major_account = major_incident[W_ACC] if major_incident else "N/A"
-
+major_incident = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
 # =================================================
-# QUARTERLY KPI (ADD-ON)
+# QUARTERLY KPI (ONLY ADDITION)
 # =================================================
-quarterly_uptimes = [
-    float(normalize_pct(r[Q_YTD]).replace("%",""))
-    for r in quarterly_rows if Q_YTD is not None
-]
+quarterly_uptimes = []
+for r in quarterly_rows:
+    if Q_YTD is not None:
+        r[Q_YTD] = normalize_pct(r[Q_YTD])
+        quarterly_uptimes.append(float(r[Q_YTD].replace("%", "")))
 
 quarterly_overall_uptime = (
     f"{sum(quarterly_uptimes)/len(quarterly_uptimes):.2f}%"
@@ -133,24 +132,105 @@ quarterly_major = max(
     key=lambda r: downtime_to_minutes(r[Q_OUT]),
     default=None
 )
-quarterly_major_account = quarterly_major[Q_ACC] if quarterly_major else "N/A"
 
 # =================================================
-# RENDER
+# WEEKLY / QUARTERLY OUTAGES
+# =================================================
+weekly_outages = [
+    {"account": r[W_ACC], "mins": downtime_to_minutes(r[W_OUT])}
+    for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0
+]
+weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
+
+quarterly_outages = [
+    {"account": r[Q_ACC], "mins": downtime_to_minutes(r[Q_OUT])}
+    for r in quarterly_rows if Q_OUT is not None and downtime_to_minutes(r[Q_OUT]) > 0
+]
+quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
+
+# =================================================
+# BAR GRAPH
+# =================================================
+def bar_base64(accounts, values, ylabel):
+    fig, ax = plt.subplots(figsize=(8, 3.5))
+    y_pos = range(len(accounts))
+    palette = ["#f97316","#22c55e","#06b6d4","#ec4899","#8b5cf6",
+               "#3b82f6","#10b981","#6366f1","#f59e0b","#84cc16","#ef4444"]
+
+    bars = ax.barh(y_pos, values, color=[palette[i % len(palette)] for i in range(len(values))], height=0.6)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(accounts)
+    ax.set_xlim(0, 100)
+    ax.set_xlabel(ylabel)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+
+    for bar, val in zip(bars, values):
+        ax.text(val + 0.5, bar.get_y() + bar.get_height()/2, f"{val:.2f}%", va="center", fontsize=9, fontweight="600")
+
+    buf = BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode()
+
+weekly_bar = bar_base64([r[W_ACC] for r in weekly_rows], weekly_uptimes, "Uptime (%)")
+quarterly_bar = bar_base64(
+    [r[Q_ACC] for r in quarterly_rows],
+    quarterly_uptimes,
+    "YTD Uptime (%)"
+) if quarterly_uptimes else ""
+
+# =================================================
+# TABLE BUILDER
+# =================================================
+def build_table(headers, rows):
+    html = "<table class='uptime-table'><tr>"
+    for h in headers:
+        html += f"<th>{h}</th>"
+    html += "</tr>"
+    for r in rows:
+        html += "<tr>"
+        for h, v in zip(headers, r):
+            cell = v
+            if "%" in str(v):
+                cell = f"<span style='background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:999px;font-weight:600;'>✔ {v}</span>"
+            html += f"<td>{cell}</td>"
+        html += "</tr>"
+    return html + "</table>"
+
+weekly_table = build_table(weekly_headers, weekly_rows)
+quarterly_table = build_table(quarterly_headers, quarterly_rows)
+
+# =================================================
+# RENDER HTML
 # =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
 html = template.render(
+    weekly_title=weekly_title,
+    quarterly_title=quarterly_title,
+    weekly_table=weekly_table,
+    quarterly_table=quarterly_table,
+
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
-    major_account=major_account,
+    major_incident=major_incident,
 
     quarterly_overall_uptime=quarterly_overall_uptime,
     quarterly_outage_count=quarterly_outage_count,
     quarterly_total_downtime=quarterly_total_downtime,
-    quarterly_major_account=quarterly_major_account
+    quarterly_major_incident=quarterly_major,
+
+    weekly_bar=weekly_bar,
+    quarterly_bar=quarterly_bar,
+    weekly_outages=weekly_outages,
+    quarterly_outages=quarterly_outages
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
