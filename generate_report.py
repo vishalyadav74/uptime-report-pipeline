@@ -115,7 +115,11 @@ for r in quarterly_rows:
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
+overall_uptime = (
+    f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
+
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -127,16 +131,42 @@ major_incident = {
 }
 
 # =================================================
-# BAR GRAPHS → BASE64
+# BAR GRAPH (FIXED – DYNAMIC SCALE + COLORS)
 # =================================================
 def bar_base64(accounts, values, title, ylabel):
     fig, ax = plt.subplots(figsize=(7,3))
-    ax.bar(accounts, values)
-    ax.set_ylim(90, 100)
+
+    colors = []
+    for v in values:
+        if v < 99:
+            colors.append("#ef4444")   # red
+        elif v < 99.5:
+            colors.append("#f59e0b")   # orange
+        else:
+            colors.append("#2563eb")   # blue
+
+    bars = ax.bar(accounts, values, color=colors)
+
+    min_val = min(values)
+    ax.set_ylim(max(0, min_val - 1), 100)
+
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
+    ax.set_title(title, fontsize=11, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.4)
     plt.xticks(rotation=30, ha="right")
+
+    for bar, val in zip(bars, values):
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            val + 0.05,
+            f"{val:.2f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
     plt.tight_layout()
+
     buf = BytesIO()
     plt.savefig(buf, format="png")
     plt.close(fig)
