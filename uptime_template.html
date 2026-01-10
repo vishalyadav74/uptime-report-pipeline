@@ -81,7 +81,7 @@ body{
   </td>
 </tr>
 
-<!-- KPI (SEQUENCE FIXED) -->
+<!-- KPI (FIXED SEQUENCE) -->
 <tr>
 <td class="section">
 <table width="100%" cellspacing="8" cellpadding="0">
@@ -107,13 +107,13 @@ body{
 </td>
 </tr>
 
-<!-- WEEKLY INFOGRAPHIC GRAPH -->
+<!-- WEEKLY BAR GRAPH -->
 <tr>
 <td class="section">
   <div class="section-header">Weekly Uptime by Account</div>
   <img src="data:image/png;base64,{{ weekly_bar }}"
        width="100%"
-       style="max-width:720px;display:block;margin:auto;">
+       style="max-width:700px;display:block;margin:auto;">
 </td>
 </tr>
 
@@ -125,14 +125,14 @@ body{
 </td>
 </tr>
 
-<!-- QUARTERLY INFOGRAPHIC GRAPH -->
+<!-- QUARTERLY BAR GRAPH -->
 {% if quarterly_bar %}
 <tr>
 <td class="section">
   <div class="section-header">Quarterly YTD Uptime by Account</div>
   <img src="data:image/png;base64,{{ quarterly_bar }}"
        width="100%"
-       style="max-width:720px;display:block;margin:auto;">
+       style="max-width:700px;display:block;margin:auto;">
 </td>
 </tr>
 {% endif %}
