@@ -26,19 +26,6 @@
     .header-title { font-size: 18px; font-weight: 600; }
     .header-subtitle { font-size: 13px; opacity: 0.9; }
 
-    .kpi {
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 10px;
-    }
-
-    .kpi-value { font-size: 17px; font-weight: 700; }
-
-    .green { color: #16a34a; }
-    .red { color: #dc2626; }
-    .orange { color: #f59e0b; }
-    .purple { color: #7c3aed; }
-
     .section-header {
       margin: 14px 0 8px;
       padding-left: 8px;
@@ -73,8 +60,7 @@
 
 <body>
 <table width="100%" cellpadding="0" cellspacing="0">
-<tr>
-<td align="center">
+<tr><td align="center">
 
 <table class="container" width="100%">
 
@@ -86,58 +72,22 @@
 </td>
 </tr>
 
-<!-- KPI -->
-<tr>
-<td class="section">
-<table width="100%" cellspacing="8">
-<tr>
-  <td class="kpi">
-    <div class="kpi-value green">✔ {{ overall_uptime }}</div>
-    Overall Uptime Avg
-  </td>
-  <td class="kpi">
-    <div class="kpi-value red">⚠ {{ outage_count }}</div>
-    Outages
-  </td>
-  <td class="kpi">
-    <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
-    Most Affected Account
-  </td>
-  <td class="kpi">
-    <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
-    Outage Downtime
-  </td>
-</tr>
-</table>
-</td>
-</tr>
-
-<!-- WEEKLY BAR + OUTAGES BOARD -->
+<!-- ================= WEEKLY ================= -->
 <tr>
 <td class="section">
 <div class="section-header">Weekly Uptime by Account</div>
 
-<table width="100%" cellpadding="0" cellspacing="0">
+<table width="100%">
 <tr>
 
-<!-- BAR GRAPH -->
-<td width="70%" valign="top">
-  <img src="data:image/png;base64,{{ weekly_bar }}"
-       width="100%"
-       style="max-width:700px;display:block;">
+<td width="70%">
+  <img src="data:image/png;base64,{{ weekly_bar }}" width="100%" style="max-width:700px;">
 </td>
 
-<!-- 🔴 REAL HANGING OUTAGES BOARD -->
-<td width="30%" valign="top" align="center">
+<td width="30%" align="center">
 
   <!-- PIN -->
-  <div style="
-    width:10px;
-    height:10px;
-    background:#dc2626;
-    border-radius:50%;
-    margin:0 auto 4px auto;">
-  </div>
+  <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
 
   <!-- ROPES -->
   <div style="display:flex;justify-content:center;gap:60px;">
@@ -147,73 +97,85 @@
 
   <!-- BOARD -->
   <div style="
-    margin-top:-2px;
     transform:rotate(-4deg);
     border:4px solid #dc2626;
-    background:#ffffff;
+    background:#fff;
     padding:12px 16px;
     border-radius:6px;
     box-shadow:0 10px 18px rgba(0,0,0,.35);
     width:90%;
   ">
-
-    <div style="
-      color:#dc2626;
-      font-weight:800;
-      font-size:18px;
-      letter-spacing:1px;
-      margin-bottom:6px;">
-      🔴 OUTAGES
+    <div style="color:#dc2626;font-weight:800;font-size:16px;">
+      🔴 Outages
     </div>
-
-    <hr style="border:none;border-top:2px solid #fecaca;margin:6px 0;">
+    <hr>
 
     {% if weekly_outages %}
       {% for o in weekly_outages %}
-        <div style="font-size:13px;font-weight:600;margin:5px 0;">
-          {{ o.account }} – {{ o.mins }} mins
-        </div>
+        <div style="font-weight:600">{{ o.account }} – {{ o.mins }} mins</div>
       {% endfor %}
     {% else %}
-      <div style="font-size:13px;color:#16a34a;font-weight:600;">
-        ✔ No Outages
-      </div>
+      <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
     {% endif %}
-
   </div>
-</td>
 
+</td>
 </tr>
 </table>
 </td>
 </tr>
 
-<!-- WEEKLY TABLE -->
-<tr>
-<td class="section">
-  <div class="section-header">{{ weekly_title }}</div>
-  {{ weekly_table | safe }}
-</td>
-</tr>
-
-<!-- QUARTERLY BAR -->
+<!-- ================= QUARTERLY ================= -->
 {% if quarterly_bar %}
 <tr>
 <td class="section">
-  <div class="section-header">Quarterly YTD Uptime by Account</div>
-  <img src="data:image/png;base64,{{ quarterly_bar }}"
-       width="100%"
-       style="max-width:700px;display:block;margin:auto;">
+<div class="section-header">Quarterly YTD Uptime by Account</div>
+
+<table width="100%">
+<tr>
+
+<td width="70%">
+  <img src="data:image/png;base64,{{ quarterly_bar }}" width="100%" style="max-width:700px;">
+</td>
+
+<td width="30%" align="center">
+
+  <!-- PIN -->
+  <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
+
+  <!-- ROPES -->
+  <div style="display:flex;justify-content:center;gap:60px;">
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+  </div>
+
+  <!-- BOARD -->
+  <div style="
+    transform:rotate(-4deg);
+    border:4px solid #dc2626;
+    background:#fff;
+    padding:12px 16px;
+    border-radius:6px;
+    box-shadow:0 10px 18px rgba(0,0,0,.35);
+    width:90%;
+  ">
+    <div style="color:#dc2626;font-weight:800;font-size:16px;">
+      🔴 Outages
+    </div>
+    <hr>
+
+    {% if quarterly_outages %}
+      {% for o in quarterly_outages %}
+        <div style="font-weight:600">{{ o.account }} – {{ o.mins }} mins</div>
+      {% endfor %}
+    {% else %}
+      <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
+    {% endif %}
+  </div>
+
 </td>
 </tr>
-{% endif %}
-
-<!-- QUARTERLY TABLE -->
-{% if quarterly_table %}
-<tr>
-<td class="section">
-  <div class="section-header">{{ quarterly_title }}</div>
-  {{ quarterly_table | safe }}
+</table>
 </td>
 </tr>
 {% endif %}
@@ -221,19 +183,15 @@
 <!-- FOOTER -->
 <tr>
 <td class="footer">
-  For any concern contact
-  <a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
-  Best Regards,<br>
-  Atin Gambhir | Manager – ITSM (CDG)<br>
-  <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
-  www.businessnext.com<br>
-  <b style="color:#e01e7e;">#UpForTomorrow</b>
+For any concern contact
+<a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
+Best Regards,<br>
+Atin Gambhir | Manager – ITSM (CDG)<br>
+<b style="color:#e01e7e;">#UpForTomorrow</b>
 </td>
 </tr>
 
 </table>
-</td>
-</tr>
-</table>
+</td></tr></table>
 </body>
 </html>
