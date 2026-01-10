@@ -107,21 +107,14 @@ weekly_uptimes = []
 
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    try:
-        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
-    except:
-        pass
+    weekly_uptimes.append(float(r[W_UP].replace("%", "")))
 
 for r in quarterly_rows:
     r[Q_UP] = normalize_pct(r[Q_UP])
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-overall_uptime = (
-    f"{sum(weekly_uptimes) / len(weekly_uptimes):.2f}%"
-    if weekly_uptimes else "N/A"
-)
-
+overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -135,43 +128,45 @@ if weekly_rows:
     }
 
 # =================================================
-# 🔴 WEEKLY OUTAGES (DESC ORDER)
+# 🔴 WEEKLY OUTAGES (DESC)
 # =================================================
 weekly_outages = []
 for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
-        weekly_outages.append({
-            "account": r[W_ACC],
-            "mins": mins
-        })
+        weekly_outages.append({"account": r[W_ACC], "mins": mins})
 
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# 🔴 QUARTERLY OUTAGES (DESC ORDER)
+# 🔴 QUARTERLY OUTAGES (DESC)
 # =================================================
 quarterly_outages = []
 if quarterly_rows and Q_OUT is not None:
     for r in quarterly_rows:
         mins = downtime_to_minutes(r[Q_OUT])
         if mins > 0:
-            quarterly_outages.append({
-                "account": r[Q_ACC],
-                "mins": mins
-            })
-
+            quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# BAR GRAPH
+# BAR GRAPH (MULTI-COLOR – ORIGINAL STYLE)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
     y_pos = range(len(accounts))
 
-    ax.barh(y_pos, [100] * len(values), color="#e5e7eb", height=0.6)
-    bars = ax.barh(y_pos, values, height=0.6)
+    palette = [
+        "#f97316", "#22c55e", "#06b6d4", "#ec4899", "#8b5cf6",
+        "#3b82f6", "#10b981", "#6366f1", "#f59e0b", "#84cc16", "#ef4444"
+    ]
+
+    bars = ax.barh(
+        y_pos,
+        values,
+        color=[palette[i % len(palette)] for i in range(len(values))],
+        height=0.6
+    )
 
     ax.set_yticks(y_pos)
     ax.set_yticklabels(accounts)
@@ -185,7 +180,7 @@ def bar_base64(accounts, values, ylabel):
 
     for bar, val in zip(bars, values):
         ax.text(
-            val + 1,
+            val + 0.5,
             bar.get_y() + bar.get_height() / 2,
             f"{val:.2f}%",
             va="center",
