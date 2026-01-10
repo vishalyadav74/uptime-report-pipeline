@@ -99,26 +99,20 @@ Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 
 # =================================================
-# NORMALIZE + KPI (FIXED AVG – NO ROUNDING)
+# NORMALIZE + KPI (NO ROUNDING, ONLY TRUNCATE)
 # =================================================
 weekly_uptimes = []
 
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     try:
-        weekly_uptimes.append(float(r[W_UP].replace("%","")))
+        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
     except:
         pass
 
-for r in quarterly_rows:
-    r[Q_UP] = normalize_pct(r[Q_UP])
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
-
-# 🔴 ONLY FIX HERE
 if weekly_uptimes:
     avg = sum(weekly_uptimes) / len(weekly_uptimes)
-    avg_truncated = int(avg * 100) / 100   # NO rounding
+    avg_truncated = int(avg * 100) / 100   # 🔥 NO ROUNDING
     overall_uptime = f"{avg_truncated:.2f}%"
 else:
     overall_uptime = "N/A"
@@ -134,7 +128,7 @@ major_incident = {
 }
 
 # =================================================
-# INFOGRAPHIC STYLE BAR GRAPH
+# INFOGRAPHIC BAR GRAPH
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
@@ -148,32 +142,25 @@ def bar_base64(accounts, values, ylabel):
         "#8b5cf6", "#ec4899", "#14b8a6",
         "#84cc16", "#f97316"
     ]
-    colors = [palette[i % len(palette)] for i in range(len(values))]
 
-    bars = ax.barh(y_pos, values, color=colors, height=0.6)
+    bars = ax.barh(y_pos, values,
+                   color=[palette[i % len(palette)] for i in range(len(values))],
+                   height=0.6)
 
     ax.set_yticks(y_pos)
     ax.set_yticklabels(accounts)
     ax.set_xlim(0, 100)
     ax.set_xlabel(ylabel)
 
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
+    ax.spines[:].set_visible(False)
     ax.tick_params(axis="y", length=0)
 
     for bar, val in zip(bars, values):
-        ax.text(
-            val + 1,
-            bar.get_y() + bar.get_height()/2,
-            f"{val:.2f}%",
-            va="center",
-            fontsize=9,
-            fontweight="600"
-        )
+        ax.text(val + 1, bar.get_y() + bar.get_height()/2,
+                f"{val:.2f}%", va="center", fontsize=9, fontweight="600")
 
-    plt.tight_layout()
     buf = BytesIO()
+    plt.tight_layout()
     plt.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
@@ -185,12 +172,6 @@ weekly_bar = bar_base64(
 )
 
 quarterly_bar = ""
-if quarterly_rows and Q_YTD is not None:
-    quarterly_bar = bar_base64(
-        [r[Q_ACC] for r in quarterly_rows],
-        [float(r[Q_YTD].replace("%","")) for r in quarterly_rows],
-        "YTD Uptime (%)"
-    )
 
 # =================================================
 # TABLE BUILDER
@@ -208,7 +189,6 @@ def build_table(headers, rows):
     return html + "</table>"
 
 weekly_table = build_table(weekly_headers, weekly_rows)
-quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
 # =================================================
 # RENDER HTML
@@ -218,15 +198,12 @@ with open("uptime_template.html", encoding="utf-8") as f:
 
 html = template.render(
     weekly_title=weekly_title,
-    quarterly_title=quarterly_title,
     weekly_table=weekly_table,
-    quarterly_table=quarterly_table,
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
     major_incident=major_incident,
     weekly_bar=weekly_bar,
-    quarterly_bar=quarterly_bar
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
