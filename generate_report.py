@@ -152,13 +152,25 @@ def bar_base64(accounts, values, ylabel):
     plt.close()
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_bar = bar_base64([r[W_ACC] for r in weekly_rows], weekly_uptimes, "Uptime (%)")
+weekly_bar = bar_base64(
+    [r[W_ACC] for r in weekly_rows],
+    weekly_uptimes,
+    "Uptime (%)"
+)
 
 quarterly_bar = ""
 if quarterly_rows:
+    quarterly_uptimes = []
+    for r in quarterly_rows:
+        r[Q_UP] = normalize_pct(r[Q_UP])
+        try:
+            quarterly_uptimes.append(float(r[Q_UP].replace("%","")))
+        except:
+            pass
+
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
-        [float(normalize_pct(r[Q_UP]).replace("%","")) for r in quarterly_rows],
+        quarterly_uptimes,
         "YTD Uptime (%)"
     )
 
@@ -172,7 +184,7 @@ def build_table(headers, rows):
     html += "</tr>"
     for r in rows:
         html += "<tr>"
-        for h,v in zip(headers,r):
+        for v in r:
             html += f"<td>{v}</td>"
         html += "</tr>"
     return html+"</table>"
