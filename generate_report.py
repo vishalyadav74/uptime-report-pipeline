@@ -106,7 +106,7 @@ weekly_uptimes = []
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     try:
-        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+        weekly_uptimes.append(float(r[W_UP].replace("%","")))
     except:
         pass
 
@@ -131,7 +131,7 @@ major_incident = {
 }
 
 # =================================================
-# INFOGRAPHIC BAR GRAPH
+# BAR GRAPH (UNCHANGED)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
@@ -164,14 +164,8 @@ def bar_base64(accounts, values, ylabel):
     ax.tick_params(axis="y", length=0)
 
     for bar, val in zip(bars, values):
-        ax.text(
-            val + 1,
-            bar.get_y() + bar.get_height()/2,
-            f"{val:.2f}%",
-            va="center",
-            fontsize=9,
-            fontweight="600"
-        )
+        ax.text(val + 1, bar.get_y() + bar.get_height()/2,
+                f"{val:.2f}%", va="center", fontsize=9, fontweight="600")
 
     buf = BytesIO()
     plt.tight_layout()
@@ -206,11 +200,8 @@ def build_table(headers, rows):
         html += "<tr>"
         for h, v in zip(headers, r):
             cell = v
-
-            # 🔥 Make Total Uptime / YTD Uptime GREEN
             if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
                 cell = f"<span class='green'>{v}</span>"
-
             html += f"<td>{cell}</td>"
         html += "</tr>"
 
