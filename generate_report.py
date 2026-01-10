@@ -134,7 +134,7 @@ if weekly_rows:
     }
 
 # =================================================
-# 🔴 HANGING OUTAGES DATA (NEW – SAFE)
+# 🔴 HANGING OUTAGES DATA (FINAL – WORKING)
 # =================================================
 weekly_outages = []
 for r in weekly_rows:
@@ -142,7 +142,7 @@ for r in weekly_rows:
     if mins > 0:
         weekly_outages.append({
             "account": r[W_ACC],
-            "minutes": mins
+            "mins": mins
         })
 
 # =================================================
@@ -152,7 +152,7 @@ def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
     y_pos = range(len(accounts))
 
-    ax.barh(y_pos, [100]*len(values), color="#e5e7eb", height=0.6)
+    ax.barh(y_pos, [100] * len(values), color="#e5e7eb", height=0.6)
 
     palette = [
         "#ef4444", "#f59e0b", "#fde047",
@@ -179,8 +179,14 @@ def bar_base64(accounts, values, ylabel):
     ax.tick_params(axis="y", length=0)
 
     for bar, val in zip(bars, values):
-        ax.text(val + 1, bar.get_y() + bar.get_height()/2,
-                f"{val:.2f}%", va="center", fontsize=9, fontweight="600")
+        ax.text(
+            val + 1,
+            bar.get_y() + bar.get_height() / 2,
+            f"{val:.2f}%",
+            va="center",
+            fontsize=9,
+            fontweight="600"
+        )
 
     buf = BytesIO()
     plt.tight_layout()
@@ -247,7 +253,7 @@ html = template.render(
     major_incident=major_incident,
     weekly_bar=weekly_bar,
     quarterly_bar=quarterly_bar,
-    weekly_outages=weekly_outages   # 🔴 FOR HANGING BOARD
+    weekly_outages=weekly_outages
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
