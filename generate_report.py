@@ -99,23 +99,36 @@ Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 
 # =================================================
-# NORMALIZE + KPI
+# ✅ FIXED NORMALIZATION + CORRECT AVERAGE
 # =================================================
 weekly_uptimes = []
 
 for r in weekly_rows:
-    r[W_UP] = normalize_pct(r[W_UP])
+    raw = r[W_UP]
+
     try:
-        weekly_uptimes.append(float(r[W_UP].replace("%","")))
+        val = float(raw)
+        if val <= 1:
+            val *= 100
     except:
-        pass
+        try:
+            val = float(str(raw).replace("%", "").strip())
+        except:
+            continue
+
+    r[W_UP] = f"{val:.2f}%"
+    weekly_uptimes.append(val)
 
 for r in quarterly_rows:
     r[Q_UP] = normalize_pct(r[Q_UP])
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
+overall_uptime = (
+    f"{sum(weekly_uptimes) / len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
+
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
@@ -127,13 +140,12 @@ major_incident = {
 }
 
 # =================================================
-# INFOGRAPHIC STYLE BAR GRAPH (ONLY CHANGE)
+# INFOGRAPHIC BAR GRAPH (UNCHANGED)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
     y_pos = range(len(accounts))
 
-    # background (100%)
     ax.barh(y_pos, [100]*len(values), color="#e5e7eb", height=0.6)
 
     palette = [
@@ -174,7 +186,7 @@ def bar_base64(accounts, values, ylabel):
 
 weekly_bar = bar_base64(
     [r[W_ACC] for r in weekly_rows],
-    [float(r[W_UP].replace("%","")) for r in weekly_rows],
+    weekly_uptimes,
     "Uptime (%)"
 )
 
