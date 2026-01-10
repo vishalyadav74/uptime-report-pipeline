@@ -131,7 +131,7 @@ major_incident = {
 }
 
 # =================================================
-# BAR GRAPH (UNCHANGED)
+# BAR GRAPH
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
@@ -188,7 +188,7 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# ✅ TABLE BUILDER (ONLY CHANGE)
+# ✅ TABLE BUILDER – GREEN BADGE PERCENTAGE
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -201,7 +201,19 @@ def build_table(headers, rows):
         for h, v in zip(headers, r):
             cell = v
             if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
-                cell = f"<span class='green'>{v}</span>"
+                cell = (
+                    "<span style='"
+                    "display:inline-block;"
+                    "padding:2px 8px;"
+                    "border-radius:999px;"
+                    "background:#dcfce7;"
+                    "color:#15803d;"
+                    "font-weight:600;"
+                    "font-size:11px;"
+                    "'>"
+                    f"{v}"
+                    "</span>"
+                )
             html += f"<td>{cell}</td>"
         html += "</tr>"
 
