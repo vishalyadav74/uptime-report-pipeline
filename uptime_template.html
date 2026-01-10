@@ -127,36 +127,57 @@
        style="max-width:700px;display:block;">
 </td>
 
-<!-- OUTAGES BOARD -->
+<!-- 🔴 REAL HANGING OUTAGES BOARD -->
 <td width="30%" valign="top" align="center">
 
-  <!-- rope -->
-  <div style="width:2px;height:18px;background:#9ca3af;margin:auto;"></div>
-
-  <!-- board -->
+  <!-- PIN -->
   <div style="
-    border:2px solid #dc2626;
-    background:#fff5f5;
-    padding:10px 14px;
+    width:10px;
+    height:10px;
+    background:#dc2626;
+    border-radius:50%;
+    margin:0 auto 4px auto;">
+  </div>
+
+  <!-- ROPES -->
+  <div style="display:flex;justify-content:center;gap:60px;">
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+  </div>
+
+  <!-- BOARD -->
+  <div style="
+    margin-top:-2px;
+    transform:rotate(-4deg);
+    border:4px solid #dc2626;
+    background:#ffffff;
+    padding:12px 16px;
     border-radius:6px;
-    box-shadow:0 6px 14px rgba(0,0,0,.18);
+    box-shadow:0 10px 18px rgba(0,0,0,.35);
     width:90%;
   ">
 
-    <div style="color:#dc2626;font-weight:700;font-size:14px;">
+    <div style="
+      color:#dc2626;
+      font-weight:800;
+      font-size:18px;
+      letter-spacing:1px;
+      margin-bottom:6px;">
       🔴 OUTAGES
     </div>
 
-    <hr style="border:none;border-top:1px solid #fecaca;margin:6px 0;">
+    <hr style="border:none;border-top:2px solid #fecaca;margin:6px 0;">
 
     {% if weekly_outages %}
       {% for o in weekly_outages %}
-        <div style="font-size:12px;margin:4px 0;">
+        <div style="font-size:13px;font-weight:600;margin:5px 0;">
           {{ o.account }} – {{ o.mins }} mins
         </div>
       {% endfor %}
     {% else %}
-      <div class="green" style="font-size:12px;">✔ No Outages</div>
+      <div style="font-size:13px;color:#16a34a;font-weight:600;">
+        ✔ No Outages
+      </div>
     {% endif %}
 
   </div>
