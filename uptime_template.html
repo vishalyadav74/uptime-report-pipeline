@@ -13,7 +13,6 @@ body{
   font-size:13px;
   color:#1f2937;
 }
-
 .container{ width:100%; background:#ffffff; }
 .section{ padding:12px 18px; }
 
@@ -22,7 +21,6 @@ body{
   color:#fff;
   padding:16px 20px;
 }
-
 .header-title{ font-size:18px; font-weight:600; }
 .header-subtitle{ font-size:13px; opacity:.9; }
 
@@ -31,11 +29,7 @@ body{
   border-radius:8px;
   padding:10px;
 }
-
-.kpi-value{
-  font-size:17px;
-  font-weight:700;
-}
+.kpi-value{ font-size:17px; font-weight:700; }
 
 .green{ color:#16a34a; }
 .red{ color:#dc2626; }
@@ -43,7 +37,7 @@ body{
 .purple{ color:#7c3aed; }
 
 .section-header{
-  margin:12px 0 6px;
+  margin:14px 0 8px;
   padding-left:8px;
   border-left:4px solid #e01e7e;
   font-weight:600;
@@ -53,19 +47,16 @@ body{
   width:100%;
   border-collapse:collapse;
 }
-
 .uptime-table th,
 .uptime-table td{
   border:1px solid #e5e7eb;
   padding:7px;
   font-size:12px;
 }
-
 .uptime-table th{
   background:#e01e7e;
   color:#fff;
 }
-
 .tick-circle{
   display:inline-block;
   width:15px;
@@ -88,54 +79,54 @@ body{
 </head>
 
 <body>
-<table width="100%">
+<table width="100%" cellpadding="0" cellspacing="0">
 <tr><td align="center">
-<table class="container">
+<table class="container" width="100%">
 
 <!-- HEADER -->
 <tr>
   <td class="header">
     <div class="header-title">SaaS Accounts Application Uptime Report</div>
     <div class="header-subtitle">
-      Weekly Application Availability Summary
+      Weekly & Quarterly Application Availability Summary
     </div>
   </td>
 </tr>
 
-<!-- KPI SEQUENCE -->
+<!-- KPI -->
 <tr>
 <td class="section">
-<table width="100%" cellspacing="8">
+<table width="100%" cellspacing="8" cellpadding="0">
 <tr>
   <td class="kpi">
     <div class="kpi-value green">✔ {{ overall_uptime }}</div>
-    Overall Uptime Avg
+    Overall Uptime
   </td>
   <td class="kpi">
     <div class="kpi-value red">⚠ {{ outage_count }}</div>
     Outages
   </td>
   <td class="kpi">
-    <div class="kpi-value purple">🚩 {{ most_affected }}</div>
-    Most Affected Account
+    <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
+    Downtime
   </td>
   <td class="kpi">
-    <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
-    Outage downtime
+    <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
+    Most Affected
   </td>
 </tr>
 </table>
 </td>
 </tr>
 
-<!-- BAR GRAPH (EMAIL SAFE – BASE64) -->
+<!-- WEEKLY DONUT -->
 <tr>
 <td class="section">
-  <div class="section-header">Weekly Uptime by Account</div>
+  <div class="section-header">Weekly Downtime Overview</div>
   <img
-    src="data:image/png;base64,{{ bar_chart }}"
-    width="100%"
-    style="max-width:700px; display:block; margin:auto;"
+    src="data:image/png;base64,{{ weekly_donut }}"
+    width="160"
+    style="display:block;margin:auto;"
   >
 </td>
 </tr>
@@ -148,7 +139,21 @@ body{
 </td>
 </tr>
 
-<!-- QUARTERLY TABLE (RESTORED) -->
+<!-- QUARTERLY DONUT -->
+{% if quarterly_donut %}
+<tr>
+<td class="section">
+  <div class="section-header">Quarterly Downtime Overview</div>
+  <img
+    src="data:image/png;base64,{{ quarterly_donut }}"
+    width="160"
+    style="display:block;margin:auto;"
+  >
+</td>
+</tr>
+{% endif %}
+
+<!-- QUARTERLY TABLE -->
 {% if quarterly_table %}
 <tr>
 <td class="section">
@@ -158,19 +163,15 @@ body{
 </tr>
 {% endif %}
 
-<!-- FOOTER / SIGNATURE -->
+<!-- FOOTER -->
 <tr>
 <td class="footer">
   For any concern over above data contact
-  <a href="mailto:incident@businessnext.com">
-    incident@businessnext.com
-  </a>
+  <a href="mailto:incident@businessnext.com">incident@businessnext.com</a>
   <br><br>
   Best Regards,<br>
   Atin Gambhir | Manager – ITSM (CDG)<br>
-  <img src="cid:businessnext_logo"
-       width="90"
-       style="margin-top:6px"><br>
+  <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
   www.businessnext.com<br>
   <b style="color:#e01e7e;">#UpForTomorrow</b>
 </td>
