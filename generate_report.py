@@ -18,8 +18,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def extract_date(name):
     m = re.search(
         r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
-        name,
-        re.IGNORECASE
+        name, re.IGNORECASE
     )
     if not m:
         return None
@@ -42,8 +41,8 @@ EXCEL_FILE = find_excel()
 def downtime_to_minutes(txt):
     if not txt:
         return 0
-    mins = 0
     txt = str(txt).lower()
+    mins = 0
     if m := re.search(r'(\d+)\s*hr', txt):
         mins += int(m.group(1)) * 60
     if m := re.search(r'(\d+)\s*min', txt):
@@ -65,16 +64,13 @@ def normalize_pct(val):
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
     ws = wb[sheet]
-
     title = ws["A1"].value or ""
     headers = [str(c.value).strip() for c in ws[2] if c.value]
     rows = []
-
     for r in ws.iter_rows(min_row=3, max_col=len(headers)):
         row = [str(c.value).strip() if c.value else "" for c in r]
         if any(row):
             rows.append(row)
-
     return title, headers, rows
 
 wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -101,10 +97,9 @@ W_RCA = idx(weekly_headers, "rca")
 Q_ACC = idx(quarterly_headers, "account", "account name")
 Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
-Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# NORMALIZE
+# NORMALIZE + KPI
 # =================================================
 weekly_uptimes = []
 
@@ -120,9 +115,6 @@ for r in quarterly_rows:
     if Q_YTD is not None:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
-# =================================================
-# KPI
-# =================================================
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%" if weekly_uptimes else "N/A"
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
@@ -135,67 +127,54 @@ major_incident = {
 }
 
 # =================================================
-# DONUT → BASE64 (EMAIL SAFE)
+# BAR GRAPHS → BASE64
 # =================================================
-def donut_base64(rows, acc_idx, out_idx, center_text):
-    labels, values = [], []
-    for r in rows:
-        mins = downtime_to_minutes(r[out_idx])
-        if mins > 0:
-            labels.append(r[acc_idx])
-            values.append(mins)
-
-    if not values:
-        return ""
-
-    fig, ax = plt.subplots(figsize=(4,4))
-    ax.pie(values, startangle=90, wedgeprops=dict(width=0.32),
-           autopct="%1.1f%%", pctdistance=0.78)
-    ax.text(0,0,center_text,ha="center",va="center",
-            fontsize=14,fontweight="bold")
-    ax.axis("equal")
-
+def bar_base64(accounts, values, title, ylabel):
+    fig, ax = plt.subplots(figsize=(7,3))
+    ax.bar(accounts, values)
+    ax.set_ylim(90, 100)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
     buf = BytesIO()
-    plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.05)
+    plt.savefig(buf, format="png")
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_donut = donut_base64(weekly_rows, W_ACC, W_OUT, overall_uptime)
+weekly_bar = bar_base64(
+    [r[W_ACC] for r in weekly_rows],
+    [float(r[W_UP].replace("%","")) for r in weekly_rows],
+    "Weekly Uptime by Account",
+    "Uptime (%)"
+)
 
-quarterly_donut = ""
-if quarterly_rows:
-    q_vals = []
-    for r in quarterly_rows:
-        try:
-            q_vals.append(float(r[Q_UP].replace("%","")))
-        except:
-            pass
-    q_center = f"{sum(q_vals)/len(q_vals):.2f}%" if q_vals else ""
-    quarterly_donut = donut_base64(quarterly_rows, Q_ACC, Q_OUT, q_center)
+quarterly_bar = ""
+if quarterly_rows and Q_YTD is not None:
+    quarterly_bar = bar_base64(
+        [r[Q_ACC] for r in quarterly_rows],
+        [float(r[Q_YTD].replace("%","")) for r in quarterly_rows],
+        "Quarterly YTD Uptime by Account",
+        "YTD Uptime (%)"
+    )
 
 # =================================================
 # TABLE BUILDER
 # =================================================
-def build_table(headers, rows, uptime_idx, ytd_idx=None):
+def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr>"
-
     for r in rows:
         html += "<tr>"
-        for i,v in enumerate(r):
-            if i == uptime_idx:
-                html += f"<td>✔ {v}</td>"
-            elif ytd_idx is not None and i == ytd_idx:
-                html += f"<td>✔ {v}</td>"
-            else:
-                html += f"<td>{v}</td>"
+        for v in r:
+            html += f"<td>{v}</td>"
         html += "</tr>"
     return html + "</table>"
 
-weekly_table = build_table(weekly_headers, weekly_rows, W_UP)
-quarterly_table = build_table(quarterly_headers, quarterly_rows, Q_UP, Q_YTD) if quarterly_rows else ""
+weekly_table = build_table(weekly_headers, weekly_rows)
+quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
 # =================================================
 # RENDER HTML
@@ -212,11 +191,11 @@ html = template.render(
     outage_count=outage_count,
     total_downtime=total_downtime,
     major_incident=major_incident,
-    weekly_donut=weekly_donut,
-    quarterly_donut=quarterly_donut
+    weekly_bar=weekly_bar,
+    quarterly_bar=quarterly_bar
 )
 
-with open(os.path.join(OUTPUT_DIR,"uptime_report.html"),"w",encoding="utf-8") as f:
+with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
     f.write(html)
 
 print("✅ FINAL REPORT GENERATED")
