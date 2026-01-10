@@ -1,168 +1,150 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>SaaS Accounts Application Uptime Report</title>
+from openpyxl import load_workbook
+from jinja2 import Template
+import os, glob, re, base64
+from datetime import datetime
+import matplotlib.pyplot as plt
+from io import BytesIO
 
-<style>
-body{
-  margin:0;
-  padding:0;
-  background:#f4f6f8;
-  font-family:Segoe UI,Arial,sans-serif;
-  font-size:13px;
-  color:#1f2937;
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+def extract_date(name):
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})', name)
+    if not m:
+        return None
+    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+
+def find_excel():
+    files = glob.glob("*.xlsx")
+    dated = [(extract_date(f), f) for f in files if extract_date(f)]
+    dated.sort(reverse=True)
+    return dated[0][1]
+
+EXCEL_FILE = find_excel()
+
+def normalize_pct(val):
+    try:
+        v = float(val)
+        if v <= 1:
+            v *= 100
+        return f"{v:.2f}%"
+    except:
+        return val
+
+def read_sheet(sheet):
+    wb = load_workbook(EXCEL_FILE, data_only=True)
+    ws = wb[sheet]
+    title = ws["A1"].value or ""
+    headers = [str(c.value).strip() for c in ws[2] if c.value]
+    rows = []
+    for r in ws.iter_rows(min_row=3, max_col=len(headers)):
+        row = [str(c.value).strip() if c.value else "" for c in r]
+        if any(row):
+            rows.append(row)
+    return title, headers, rows
+
+wb = load_workbook(EXCEL_FILE, data_only=True)
+weekly_title, weekly_headers, weekly_rows = read_sheet(wb.sheetnames[0])
+
+quarterly_title, quarterly_headers, quarterly_rows = "", [], []
+if len(wb.sheetnames) > 1:
+    quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
+
+def idx(headers, *names):
+    h = [x.lower() for x in headers]
+    for n in names:
+        if n.lower() in h:
+            return h.index(n.lower())
+
+W_ACC = idx(weekly_headers,"account","account name")
+W_UP  = idx(weekly_headers,"uptime","total uptime")
+W_OUT = idx(weekly_headers,"outage downtime")
+
+Q_ACC = idx(quarterly_headers,"account","account name")
+Q_YTD = idx(quarterly_headers,"ytd","ytd uptime")
+
+weekly_vals = []
+for r in weekly_rows:
+    r[W_UP] = normalize_pct(r[W_UP])
+    weekly_vals.append(float(r[W_UP].replace("%","")))
+
+overall_uptime = f"{sum(weekly_vals)/len(weekly_vals):.2f}%"
+total_downtime = sum(0 for _ in weekly_rows)
+outage_count = sum(1 for _ in weekly_rows)
+
+major_incident = {
+    "account": weekly_rows[0][W_ACC]
 }
-.container{ width:100%; background:#ffffff; }
-.section{ padding:12px 18px; }
 
-.header{
-  background:#e01e7e;
-  color:#fff;
-  padding:16px 20px;
-}
-.header-title{ font-size:18px; font-weight:600; }
-.header-subtitle{ font-size:13px; opacity:.9; }
+def bar_base64(accounts, values, ylabel):
+    fig, ax = plt.subplots(figsize=(7,3))
+    palette = ["#2563eb","#16a34a","#f59e0b","#dc2626",
+               "#7c3aed","#0d9488","#db2777","#ca8a04"]
+    colors = [palette[i % len(palette)] for i in range(len(values))]
+    bars = ax.bar(accounts, values, color=colors)
+    ax.set_ylim(max(min(values)-1,0), 100)
+    ax.set_ylabel(ylabel)
+    ax.grid(axis="y", linestyle="--", alpha=0.4)
+    plt.xticks(rotation=30, ha="right")
 
-.kpi{
-  background:#f9fafb;
-  border-radius:8px;
-  padding:10px;
-}
-.kpi-value{ font-size:17px; font-weight:700; }
+    for bar, val in zip(bars, values):
+        ax.text(bar.get_x()+bar.get_width()/2, val+0.02,
+                f"{val:.2f}%", ha="center", va="bottom", fontsize=8)
 
-.green{ color:#16a34a; }
-.red{ color:#dc2626; }
-.orange{ color:#f59e0b; }
-.purple{ color:#7c3aed; }
+    plt.tight_layout()
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode()
 
-.section-header{
-  margin:14px 0 8px;
-  padding-left:8px;
-  border-left:4px solid #e01e7e;
-  font-weight:600;
-}
+weekly_bar = bar_base64(
+    [r[W_ACC] for r in weekly_rows],
+    weekly_vals,
+    "Uptime (%)"
+)
 
-.uptime-table{
-  width:100%;
-  border-collapse:collapse;
-}
-.uptime-table th,
-.uptime-table td{
-  border:1px solid #e5e7eb;
-  padding:7px;
-  font-size:12px;
-}
-.uptime-table th{
-  background:#e01e7e;
-  color:#fff;
-}
+quarterly_bar = ""
+if quarterly_rows:
+    quarterly_vals = [float(r[Q_YTD].replace("%","")) for r in quarterly_rows]
+    quarterly_bar = bar_base64(
+        [r[Q_ACC] for r in quarterly_rows],
+        quarterly_vals,
+        "YTD Uptime (%)"
+    )
 
-.footer{
-  border-top:1px solid #e5e7eb;
-  padding:14px 18px;
-  font-size:12px;
-}
-</style>
-</head>
+def build_table(headers, rows):
+    html = "<table class='uptime-table'><tr>"
+    for h in headers:
+        html += f"<th>{h}</th>"
+    html += "</tr>"
+    for r in rows:
+        html += "<tr>"
+        for v in r:
+            html += f"<td>{v}</td>"
+        html += "</tr>"
+    return html + "</table>"
 
-<body>
-<table width="100%" cellpadding="0" cellspacing="0">
-<tr><td align="center">
-<table class="container" width="100%">
+weekly_table = build_table(weekly_headers, weekly_rows)
+quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
-<!-- HEADER -->
-<tr>
-  <td class="header">
-    <div class="header-title">SaaS Accounts Application Uptime Report</div>
-    <div class="header-subtitle">
-      Weekly & Quarterly Application Availability Summary
-    </div>
-  </td>
-</tr>
+with open("uptime_template.html", encoding="utf-8") as f:
+    template = Template(f.read())
 
-<!-- KPI (FINAL SEQUENCE) -->
-<tr>
-<td class="section">
-<table width="100%" cellspacing="8" cellpadding="0">
-<tr>
-  <td class="kpi">
-    <div class="kpi-value green">✔ {{ overall_uptime }}</div>
-    Overall Uptime Avg
-  </td>
-  <td class="kpi">
-    <div class="kpi-value red">⚠ {{ outage_count }}</div>
-    Outages
-  </td>
-  <td class="kpi">
-    <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
-    Most Affected Account
-  </td>
-  <td class="kpi">
-    <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
-    Outage Downtime
-  </td>
-</tr>
-</table>
-</td>
-</tr>
+html = template.render(
+    weekly_title=weekly_title,
+    quarterly_title=quarterly_title,
+    weekly_table=weekly_table,
+    quarterly_table=quarterly_table,
+    overall_uptime=overall_uptime,
+    outage_count=outage_count,
+    total_downtime=total_downtime,
+    major_incident=major_incident,
+    weekly_bar=weekly_bar,
+    quarterly_bar=quarterly_bar
+)
 
-<!-- WEEKLY BAR GRAPH -->
-<tr>
-<td class="section">
-  <div class="section-header">Weekly Uptime by Account</div>
-  <img src="data:image/png;base64,{{ weekly_bar }}"
-       width="100%"
-       style="max-width:700px;display:block;margin:auto;">
-</td>
-</tr>
+with open(os.path.join(OUTPUT_DIR,"uptime_report.html"),"w",encoding="utf-8") as f:
+    f.write(html)
 
-<!-- WEEKLY TABLE -->
-<tr>
-<td class="section">
-  <div class="section-header">{{ weekly_title }}</div>
-  {{ weekly_table | safe }}
-</td>
-</tr>
-
-<!-- QUARTERLY BAR GRAPH -->
-{% if quarterly_bar %}
-<tr>
-<td class="section">
-  <div class="section-header">Quarterly YTD Uptime by Account</div>
-  <img src="data:image/png;base64,{{ quarterly_bar }}"
-       width="100%"
-       style="max-width:700px;display:block;margin:auto;">
-</td>
-</tr>
-{% endif %}
-
-<!-- QUARTERLY TABLE -->
-{% if quarterly_table %}
-<tr>
-<td class="section">
-  <div class="section-header">{{ quarterly_title }}</div>
-  {{ quarterly_table | safe }}
-</td>
-</tr>
-{% endif %}
-
-<!-- FOOTER -->
-<tr>
-<td class="footer">
-  For any concern over above data contact
-  <a href="mailto:incident@businessnext.com">incident@businessnext.com</a>
-  <br><br>
-  Best Regards,<br>
-  Atin Gambhir | Manager – ITSM (CDG)<br>
-  <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
-  www.businessnext.com<br>
-  <b style="color:#e01e7e;">#UpForTomorrow</b>
-</td>
-</tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>
+print("✅ FINAL REPORT GENERATED")
