@@ -89,7 +89,7 @@ W_UP  = idx(weekly_headers, "uptime", "total uptime")
 W_OUT = idx(weekly_headers, "outage downtime")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
-Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
+Q_UP  = idx(quarterly_headers, "ytd uptime", "uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
@@ -113,35 +113,31 @@ if weekly_rows:
     major_incident["account"] = major_row[W_ACC]
 
 # =================================================
-# 🔴 WEEKLY OUTAGES (DESC)
+# 🔴 OUTAGES DATA (SAFE ADD)
 # =================================================
-weekly_outages = []
-for r in weekly_rows:
-    mins = downtime_to_minutes(r[W_OUT])
-    if mins > 0:
-        weekly_outages.append({"account": r[W_ACC], "mins": mins})
+weekly_outages = sorted(
+    [{"account": r[W_ACC], "mins": downtime_to_minutes(r[W_OUT])}
+     for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0],
+    key=lambda x: x["mins"],
+    reverse=True
+)
 
-weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
-
-# =================================================
-# 🔴 QUARTERLY OUTAGES (DESC)
-# =================================================
 quarterly_outages = []
 if quarterly_rows and Q_OUT is not None:
-    for r in quarterly_rows:
-        mins = downtime_to_minutes(r[Q_OUT])
-        if mins > 0:
-            quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
-
-quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
+    quarterly_outages = sorted(
+        [{"account": r[Q_ACC], "mins": downtime_to_minutes(r[Q_OUT])}
+         for r in quarterly_rows if downtime_to_minutes(r[Q_OUT]) > 0],
+        key=lambda x: x["mins"],
+        reverse=True
+    )
 
 # =================================================
-# BAR GRAPH
+# BAR GRAPH (UNCHANGED COLORS)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8,3.5))
     ax.barh(range(len(values)), [100]*len(values), color="#e5e7eb")
-    ax.barh(range(len(values)), values)
+    ax.barh(range(len(values)), values, color="#2563eb")
     ax.set_yticks(range(len(values)))
     ax.set_yticklabels(accounts)
     ax.set_xlim(0,100)
@@ -152,30 +148,18 @@ def bar_base64(accounts, values, ylabel):
     plt.close()
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_bar = bar_base64(
-    [r[W_ACC] for r in weekly_rows],
-    weekly_uptimes,
-    "Uptime (%)"
-)
+weekly_bar = bar_base64([r[W_ACC] for r in weekly_rows], weekly_uptimes, "Uptime (%)")
 
 quarterly_bar = ""
 if quarterly_rows:
-    quarterly_uptimes = []
-    for r in quarterly_rows:
-        r[Q_UP] = normalize_pct(r[Q_UP])
-        try:
-            quarterly_uptimes.append(float(r[Q_UP].replace("%","")))
-        except:
-            pass
-
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
-        quarterly_uptimes,
+        [float(normalize_pct(r[Q_UP]).replace("%","")) for r in quarterly_rows],
         "YTD Uptime (%)"
     )
 
 # =================================================
-# TABLE
+# TABLE (UNCHANGED)
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -184,7 +168,7 @@ def build_table(headers, rows):
     html += "</tr>"
     for r in rows:
         html += "<tr>"
-        for v in r:
+        for h,v in zip(headers,r):
             html += f"<td>{v}</td>"
         html += "</tr>"
     return html+"</table>"
