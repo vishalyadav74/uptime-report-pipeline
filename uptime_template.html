@@ -133,7 +133,6 @@
 
 <td width="30%" valign="top">
 
-<!-- ✅ PROFESSIONAL OUTAGES BOARD -->
 <div style="
   background:#ffffff;
   border-left:4px solid #dc2626;
@@ -142,32 +141,20 @@
   box-shadow:0 4px 12px rgba(0,0,0,.08);
   width:92%;
 ">
-
   <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px;">
     Outages
   </div>
-
   <div style="height:1px;background:#e5e7eb;margin-bottom:8px;"></div>
 
   {% if weekly_outages %}
     {% for o in weekly_outages %}
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        font-size:13px;
-        color:#374151;
-        margin-bottom:6px;
-      ">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
         <span>{{ o.account }}</span>
-        <span style="font-weight:600;color:#dc2626;">
-          {{ o.mins }} mins
-        </span>
+        <span style="font-weight:600;color:#dc2626;">{{ o.mins }} mins</span>
       </div>
     {% endfor %}
   {% else %}
-    <div style="color:#16a34a;font-weight:600;font-size:13px;">
-      No outages reported
-    </div>
+    <div style="color:#16a34a;font-weight:600;">No outages reported</div>
   {% endif %}
 </div>
 
@@ -191,57 +178,19 @@
 <td class="section">
 <div class="section-header">Quarterly YTD Uptime by Account</div>
 
-<table width="100%">
-<tr>
-
-<td width="70%" valign="top">
-  <img src="data:image/png;base64,{{ quarterly_bar }}"
-       width="100%"
-       style="max-width:700px;display:block;">
-</td>
-
-<td width="30%" valign="top">
-
-<div style="
-  background:#ffffff;
-  border-left:4px solid #dc2626;
-  padding:14px 16px;
-  border-radius:6px;
-  box-shadow:0 4px 12px rgba(0,0,0,.08);
-  width:92%;
-">
-
-  <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px;">
-    Outages
-  </div>
-
-  <div style="height:1px;background:#e5e7eb;margin-bottom:8px;"></div>
-
-  {% if quarterly_outages %}
-    {% for o in quarterly_outages %}
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        font-size:13px;
-        color:#374151;
-        margin-bottom:6px;
-      ">
-        <span>{{ o.account }}</span>
-        <span style="font-weight:600;color:#dc2626;">
-          {{ o.mins }} mins
-        </span>
-      </div>
-    {% endfor %}
-  {% else %}
-    <div style="color:#16a34a;font-weight:600;font-size:13px;">
-      No outages reported
-    </div>
-  {% endif %}
-</div>
-
+<img src="data:image/png;base64,{{ quarterly_bar }}"
+     width="100%"
+     style="max-width:700px;display:block;">
 </td>
 </tr>
-</table>
+{% endif %}
+
+<!-- ================= ✅ QUARTERLY TABLE (FIX ADDED) ================= -->
+{% if quarterly_table %}
+<tr>
+<td class="section">
+  <div class="section-header">{{ quarterly_title }}</div>
+  {{ quarterly_table | safe }}
 </td>
 </tr>
 {% endif %}
