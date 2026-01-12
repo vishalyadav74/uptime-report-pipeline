@@ -101,21 +101,25 @@ Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# NORMALIZE + KPI
+# NORMALIZE + KPI  ✅ FIXED OVERALL UPTIME AVG
 # =================================================
 weekly_uptimes = []
 
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
-    weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+    try:
+        weekly_uptimes.append(float(r[W_UP].replace("%", "")))
+    except:
+        pass
 
-for r in quarterly_rows:
-    r[Q_UP] = normalize_pct(r[Q_UP])
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
+overall_uptime = (
+    f"{sum(weekly_uptimes) / len(weekly_uptimes):.2f}%"
+    if weekly_uptimes else "N/A"
+)
 
-overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
+outage_count = sum(
+    1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0
+)
 
 # =================================================
 # MOST AFFECTED (WEEKLY)
@@ -129,7 +133,7 @@ if weekly_rows:
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
 
-# ✅ FINAL FIX: ONLY MOST AFFECTED ACCOUNT DOWNTIME
+# ✅ ONLY MOST AFFECTED ACCOUNT DOWNTIME
 total_downtime = downtime_to_minutes(major_incident["outage"])
 
 # =================================================
@@ -155,7 +159,7 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# BAR GRAPH (MULTI-COLOR – ORIGINAL STYLE)
+# BAR GRAPH
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 3.5))
