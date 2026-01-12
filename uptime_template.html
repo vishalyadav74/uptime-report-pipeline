@@ -108,7 +108,8 @@
     Most Affected Account
   </td>
 
-  <td class="kpi">
+  <!-- ✅ HOVER NOTE ADDED HERE -->
+  <td class="kpi" title="Outage downtime for the most affected account">
     <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
     Outage Downtime
   </td>
@@ -131,17 +132,44 @@
        style="max-width:700px;display:block;">
 </td>
 
-<!-- ✅ WEEKLY PIE CHART (REPLACED BOARD) -->
 <td width="30%" valign="top" align="center">
-  {% if weekly_pie %}
-    <img src="data:image/png;base64,{{ weekly_pie }}"
-         width="220"
-         style="display:block;margin:auto;">
-  {% else %}
-    <div class="green" style="font-weight:600;">✔ No Outages</div>
-  {% endif %}
-</td>
 
+  <!-- PIN -->
+  <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
+
+  <!-- ROPES -->
+  <div style="display:flex;justify-content:center;gap:60px;">
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+  </div>
+
+  <!-- OUTAGE BOARD -->
+  <div style="
+    margin-top:-2px;
+    transform:rotate(-4deg);
+    border:4px solid #dc2626;
+    background:#ffffff;
+    padding:12px 16px;
+    border-radius:6px;
+    box-shadow:0 10px 18px rgba(0,0,0,.35);
+    width:90%;
+  ">
+    <div style="color:#dc2626;font-weight:800;font-size:18px;">
+      🔴 Outages
+    </div>
+
+    <hr style="border:none;border-top:2px solid #fecaca;margin:6px 0;">
+
+    {% if weekly_outages %}
+      {% for o in weekly_outages %}
+        <div style="font-weight:600">{{ o.account }} – {{ o.mins }} mins</div>
+      {% endfor %}
+    {% else %}
+      <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
+    {% endif %}
+  </div>
+
+</td>
 </tr>
 </table>
 </td>
@@ -170,17 +198,41 @@
        style="max-width:700px;display:block;">
 </td>
 
-<!-- ✅ QUARTERLY PIE CHART -->
 <td width="30%" valign="top" align="center">
-  {% if quarterly_pie %}
-    <img src="data:image/png;base64,{{ quarterly_pie }}"
-         width="220"
-         style="display:block;margin:auto;">
-  {% else %}
-    <div class="green" style="font-weight:600;">✔ No Outages</div>
-  {% endif %}
-</td>
 
+  <div style="width:10px;height:10px;background:#dc2626;border-radius:50%;margin:0 auto 4px;"></div>
+
+  <div style="display:flex;justify-content:center;gap:60px;">
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+    <div style="width:2px;height:22px;background:#9ca3af;"></div>
+  </div>
+
+  <div style="
+    margin-top:-2px;
+    transform:rotate(-4deg);
+    border:4px solid #dc2626;
+    background:#ffffff;
+    padding:12px 16px;
+    border-radius:6px;
+    box-shadow:0 10px 18px rgba(0,0,0,.35);
+    width:90%;
+  ">
+    <div style="color:#dc2626;font-weight:800;font-size:18px;">
+      🔴 Outages
+    </div>
+
+    <hr style="border:none;border-top:2px solid #fecaca;margin:6px 0;">
+
+    {% if quarterly_outages %}
+      {% for o in quarterly_outages %}
+        <div style="font-weight:600">{{ o.account }} – {{ o.mins }} mins</div>
+      {% endfor %}
+    {% else %}
+      <div style="color:#16a34a;font-weight:600">✔ No Outages</div>
+    {% endif %}
+  </div>
+
+</td>
 </tr>
 </table>
 </td>
