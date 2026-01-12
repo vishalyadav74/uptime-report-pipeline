@@ -127,10 +127,9 @@ if weekly_rows:
     }
 
 # =================================================
-# OUTAGES LIST
+# OUTAGES LIST  ✅ FIXED
 # =================================================
 weekly_outages = []
-/color=""
 for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
@@ -146,14 +145,13 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# ✅ FINAL VERTICAL GREEN GRAPH (95–100)
+# VERTICAL GREEN GRAPH (95–100)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
-
     x = range(len(accounts))
-    bars = ax.bar(x, values, color="#22c55e", width=0.55)
 
+    ax.bar(x, values, color="#22c55e", width=0.55)
     ax.set_ylim(95, 100)
     ax.set_ylabel(ylabel, fontsize=10)
     ax.set_title("Weekly Uptime by Account", fontsize=11)
@@ -196,14 +194,13 @@ def build_table(headers, rows):
     for r in rows:
         html += "<tr>"
         for h, v in zip(headers, r):
-            cell = v
-            if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
-                cell = (
+            if "%" in str(v):
+                v = (
                     "<span style='padding:2px 8px;border-radius:999px;"
                     "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
                     f"{v}</span>"
                 )
-            html += f"<td>{cell}</td>"
+            html += f"<td>{v}</td>"
         html += "</tr>"
     return html + "</table>"
 
