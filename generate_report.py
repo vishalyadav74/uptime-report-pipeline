@@ -154,7 +154,6 @@ def bar_base64(accounts, values, ylabel):
     ax.bar(x, values, color="#22c55e", width=0.55)
     ax.set_ylim(95, 100)
     ax.set_ylabel(ylabel, fontsize=10)
-    ax.set_title("Weekly Uptime by Account", fontsize=11)
 
     ax.set_xticks(x)
     ax.set_xticklabels(accounts, rotation=30, ha="right", fontsize=9)
