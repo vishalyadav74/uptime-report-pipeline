@@ -53,7 +53,7 @@ def normalize_pct(val):
         return val
 
 # =================================================
-# READ SHEETS
+# READ SHEET
 # =================================================
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -113,6 +113,7 @@ if weekly_rows:
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
 
+# Only most affected account downtime
 total_downtime = downtime_to_minutes(major_incident["outage"])
 
 # =================================================
@@ -137,12 +138,13 @@ if quarterly_rows and Q_OUT is not None:
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 4))
-    x = range(len(accounts))
 
+    x = range(len(accounts))
     bars = ax.bar(x, values, color="#22c55e", width=0.6)
 
     ax.set_ylim(95, 100)
     ax.set_ylabel(ylabel)
+
     ax.set_xticks(x)
     ax.set_xticklabels(accounts, rotation=30, ha="right")
 
@@ -164,6 +166,7 @@ def bar_base64(accounts, values, ylabel):
     plt.tight_layout()
     plt.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
+
     return base64.b64encode(buf.getvalue()).decode()
 
 weekly_bar = bar_base64(
@@ -181,7 +184,7 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# TABLES
+# TABLE BUILDER
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
