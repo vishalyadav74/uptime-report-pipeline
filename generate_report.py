@@ -127,7 +127,7 @@ if weekly_rows:
     }
 
 # =================================================
-# OUTAGES LIST  ✅ FIXED
+# OUTAGES LIST
 # =================================================
 weekly_outages = []
 for r in weekly_rows:
@@ -145,7 +145,7 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# VERTICAL GREEN GRAPH (95–100)
+# BAR GRAPH
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
@@ -174,13 +174,28 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
-quarterly_bar = ""
+# =================================================
+# ✅ QUARTERLY BAR – FINAL FIX
+# =================================================
+quarterly_bar = None
+
 if quarterly_rows and Q_YTD is not None:
-    quarterly_bar = bar_base64(
-        [r[Q_ACC] for r in quarterly_rows],
-        [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
-        "YTD Uptime (%)"
-    )
+    q_accounts = []
+    q_values = []
+
+    for r in quarterly_rows:
+        try:
+            q_accounts.append(r[Q_ACC])
+            q_values.append(float(r[Q_YTD].replace("%", "")))
+        except:
+            pass
+
+    if q_accounts and q_values:
+        quarterly_bar = bar_base64(
+            q_accounts,
+            q_values,
+            "YTD Uptime (%)"
+        )
 
 # =================================================
 # TABLES
