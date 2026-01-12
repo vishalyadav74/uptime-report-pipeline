@@ -94,15 +94,20 @@
     <div class="kpi-value green">✔ {{ overall_uptime }}</div>
     Overall Uptime Avg
   </td>
+
   <td class="kpi">
     <div class="kpi-value red">⚠ {{ outage_count }}</div>
     Outages
   </td>
+
   <td class="kpi">
     <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
     Most Affected Account
   </td>
-  <td class="kpi">
+
+  <!-- ✅ ONLY CHANGE: HOVER ADDED -->
+  <td class="kpi"
+      title="Total outage duration for the most affected account during the reporting period">
     <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
     Outage Downtime
   </td>
@@ -194,7 +199,12 @@
 <td class="footer">
 For any concern contact <a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
 Best Regards,<br>
-Atin Gambhir | Manager – ITSM (CDG)
+Atin Gambhir | Manager – ITSM (CDG)<br>
+
+<img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
+www.businessnext.com<br>
+
+<b style="color:#e01e7e;">#UpForTomorrow</b>
 </td>
 </tr>
 
