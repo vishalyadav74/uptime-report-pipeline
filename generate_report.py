@@ -16,10 +16,16 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # PICK LATEST EXCEL
 # =================================================
 def extract_date(name):
-    m = re.search(r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})', name, re.I)
+    m = re.search(
+        r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
+        name, re.IGNORECASE
+    )
     if not m:
         return None
-    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
+    return datetime.strptime(
+        f"{m.group(1)} {m.group(3)} {m.group(4)}",
+        "%d %b %Y"
+    )
 
 def find_excel():
     files = glob.glob("*.xlsx")
@@ -90,18 +96,26 @@ W_OUT = idx(weekly_headers, "outage downtime")
 W_RCA = idx(weekly_headers, "rca")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
+Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI LOGIC
+# KPI
 # =================================================
 weekly_uptimes = []
+
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     weekly_uptimes.append(float(r[W_UP].replace("%", "")))
 
+for r in quarterly_rows:
+    r[Q_UP] = normalize_pct(r[Q_UP])
+    if Q_YTD is not None:
+        r[Q_YTD] = normalize_pct(r[Q_YTD])
+
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
 major_incident = {"account": "N/A", "outage": "", "rca": ""}
@@ -113,16 +127,14 @@ if weekly_rows:
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
 
-# Only most affected account downtime
-total_downtime = downtime_to_minutes(major_incident["outage"])
-
 # =================================================
-# OUTAGE LISTS
+# OUTAGES LIST
 # =================================================
-weekly_outages = [
-    {"account": r[W_ACC], "mins": downtime_to_minutes(r[W_OUT])}
-    for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0
-]
+weekly_outages = []
+for r in weekly_rows:
+    mins = downtime_to_minutes(r[W_OUT])
+    if mins > 0:
+        weekly_outages.append({"account": r[W_ACC], "mins": mins})
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 quarterly_outages = []
@@ -134,17 +146,21 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# ✅ FINAL GRAPH (VERTICAL • GREEN • 95–100)
+# ✅ FINAL VERTICAL GREEN GRAPH (95–100)
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(8, 4))
 
     x = range(len(accounts))
-    bars = ax.bar(x, values, color="#22c55e", width=0.6)
+    bars = ax.bar(
+        x,
+        values,
+        color="#22c55e",
+        width=0.6
+    )
 
     ax.set_ylim(95, 100)
     ax.set_ylabel(ylabel)
-
     ax.set_xticks(x)
     ax.set_xticklabels(accounts, rotation=30, ha="right")
 
@@ -154,7 +170,7 @@ def bar_base64(accounts, values, ylabel):
     for bar, val in zip(bars, values):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            val + 0.05,
+            val + 0.03,
             f"{val:.2f}%",
             ha="center",
             va="bottom",
@@ -184,7 +200,7 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# TABLE BUILDER
+# TABLES
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -194,9 +210,14 @@ def build_table(headers, rows):
     for r in rows:
         html += "<tr>"
         for h, v in zip(headers, r):
-            if "%" in str(v):
-                v = f"<span style='background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:999px;'>✔ {v}</span>"
-            html += f"<td>{v}</td>"
+            cell = v
+            if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
+                cell = (
+                    "<span style='padding:2px 8px;border-radius:999px;"
+                    "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
+                    f"{v}</span>"
+                )
+            html += f"<td>{cell}</td>"
         html += "</tr>"
     return html + "</table>"
 
