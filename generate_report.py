@@ -16,16 +16,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # PICK LATEST EXCEL
 # =================================================
 def extract_date(name):
-    m = re.search(
-        r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})',
-        name, re.IGNORECASE
-    )
+    m = re.search(r'(\d{1,2})(st|nd|rd|th)[_\-\s]*([A-Za-z]+)[_\-\s]*(\d{4})', name, re.I)
     if not m:
         return None
-    return datetime.strptime(
-        f"{m.group(1)} {m.group(3)} {m.group(4)}",
-        "%d %b %Y"
-    )
+    return datetime.strptime(f"{m.group(1)} {m.group(3)} {m.group(4)}", "%d %b %Y")
 
 def find_excel():
     files = glob.glob("*.xlsx")
@@ -59,7 +53,7 @@ def normalize_pct(val):
         return val
 
 # =================================================
-# READ SHEET
+# READ SHEETS
 # =================================================
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -96,30 +90,20 @@ W_OUT = idx(weekly_headers, "outage downtime")
 W_RCA = idx(weekly_headers, "rca")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
-Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
 Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# NORMALIZE + KPI
+# KPI LOGIC
 # =================================================
 weekly_uptimes = []
-
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     weekly_uptimes.append(float(r[W_UP].replace("%", "")))
 
-for r in quarterly_rows:
-    r[Q_UP] = normalize_pct(r[Q_UP])
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
-
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
-# =================================================
-# MOST AFFECTED (WEEKLY)
-# =================================================
 major_incident = {"account": "N/A", "outage": "", "rca": ""}
 if weekly_rows:
     major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
@@ -129,22 +113,18 @@ if weekly_rows:
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
 
-# ✅ ONLY MOST AFFECTED ACCOUNT DOWNTIME
+# 👉 only most affected account downtime
 total_downtime = downtime_to_minutes(major_incident["outage"])
 
 # =================================================
-# 🔴 WEEKLY OUTAGES (DESC)
+# OUTAGE LISTS
 # =================================================
-weekly_outages = []
-for r in weekly_rows:
-    mins = downtime_to_minutes(r[W_OUT])
-    if mins > 0:
-        weekly_outages.append({"account": r[W_ACC], "mins": mins})
+weekly_outages = [
+    {"account": r[W_ACC], "mins": downtime_to_minutes(r[W_OUT])}
+    for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0
+]
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
-# =================================================
-# 🔴 QUARTERLY OUTAGES (DESC)
-# =================================================
 quarterly_outages = []
 if quarterly_rows and Q_OUT is not None:
     for r in quarterly_rows:
@@ -154,38 +134,25 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# BAR GRAPH
+# ✅ FINAL GRAPH (HORIZONTAL • GREEN • 95–100)
 # =================================================
-def bar_base64(accounts, values, ylabel):
-    fig, ax = plt.subplots(figsize=(8, 3.5))
-    y_pos = range(len(accounts))
+def bar_base64(accounts, values, xlabel):
+    fig, ax = plt.subplots(figsize=(8, 3.8))
+    y = range(len(accounts))
 
-    bars = ax.barh(
-        y_pos,
-        values,
-        color="#16a34a",
-        height=0.6
-    )
-
-    ax.set_yticks(y_pos)
+    ax.barh(y, values, color="#22c55e", height=0.6)
+    ax.set_yticks(y)
     ax.set_yticklabels(accounts)
     ax.set_xlim(95, 100)
-    ax.set_xlabel(ylabel)
+    ax.set_xlabel(xlabel)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_visible(False)
     ax.tick_params(axis="y", length=0)
 
-    for bar, val in zip(bars, values):
-        ax.text(
-            val + 0.05,
-            bar.get_y() + bar.get_height() / 2,
-            f"{val:.2f}%",
-            va="center",
-            fontsize=9,
-            fontweight="600"
-        )
+    for i, v in enumerate(values):
+        ax.text(v + 0.05, i, f"{v:.2f}%", va="center", fontsize=9)
 
     buf = BytesIO()
     plt.tight_layout()
@@ -199,44 +166,28 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
-# ✅ FINAL FIX — QUARTERLY GRAPH ALWAYS WORKS
 quarterly_bar = ""
-if quarterly_rows:
-    if Q_YTD is not None:
-        values = [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows]
-        ylabel = "YTD Uptime (%)"
-    else:
-        values = [float(r[Q_UP].replace("%", "")) for r in quarterly_rows]
-        ylabel = "Uptime (%)"
-
+if quarterly_rows and Q_YTD is not None:
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
-        values,
-        ylabel
+        [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
+        "YTD Uptime (%)"
     )
 
 # =================================================
-# TABLE BUILDER
+# TABLES
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
     for h in headers:
         html += f"<th>{h}</th>"
     html += "</tr>"
-
     for r in rows:
         html += "<tr>"
         for h, v in zip(headers, r):
-            cell = v
-            if "%" in str(v) and ("uptime" in h.lower() or "ytd" in h.lower()):
-                cell = (
-                    "<span style='display:inline-block;"
-                    "padding:2px 8px;border-radius:999px;"
-                    "background:#dcfce7;color:#16a34a;"
-                    "font-weight:600;font-size:11px;'>"
-                    f"✔ {v}</span>"
-                )
-            html += f"<td>{cell}</td>"
+            if "%" in str(v):
+                v = f"<span style='background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:999px;'>✔ {v}</span>"
+            html += f"<td>{v}</td>"
         html += "</tr>"
     return html + "</table>"
 
