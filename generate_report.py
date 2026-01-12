@@ -115,9 +115,11 @@ for r in quarterly_rows:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
+# =================================================
+# MOST AFFECTED (WEEKLY)
+# =================================================
 major_incident = {"account": "N/A", "outage": "", "rca": ""}
 if weekly_rows:
     major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
@@ -126,6 +128,9 @@ if weekly_rows:
         "outage": major_row[W_OUT],
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
+
+# ✅ FINAL FIX: ONLY MOST AFFECTED ACCOUNT DOWNTIME
+total_downtime = downtime_to_minutes(major_incident["outage"])
 
 # =================================================
 # 🔴 WEEKLY OUTAGES (DESC)
