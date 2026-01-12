@@ -113,7 +113,6 @@ if weekly_rows:
         "rca": major_row[W_RCA] if W_RCA is not None else ""
     }
 
-# 👉 only most affected account downtime
 total_downtime = downtime_to_minutes(major_incident["outage"])
 
 # =================================================
@@ -134,25 +133,32 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# ✅ FINAL GRAPH (HORIZONTAL • GREEN • 95–100)
+# ✅ FINAL GRAPH (VERTICAL • GREEN • 95–100)
 # =================================================
-def bar_base64(accounts, values, xlabel):
-    fig, ax = plt.subplots(figsize=(8, 3.8))
-    y = range(len(accounts))
+def bar_base64(accounts, values, ylabel):
+    fig, ax = plt.subplots(figsize=(8, 4))
+    x = range(len(accounts))
 
-    ax.barh(y, values, color="#22c55e", height=0.6)
-    ax.set_yticks(y)
-    ax.set_yticklabels(accounts)
-    ax.set_xlim(95, 100)
-    ax.set_xlabel(xlabel)
+    bars = ax.bar(x, values, color="#22c55e", width=0.6)
+
+    ax.set_ylim(95, 100)
+    ax.set_ylabel(ylabel)
+    ax.set_xticks(x)
+    ax.set_xticklabels(accounts, rotation=30, ha="right")
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.tick_params(axis="y", length=0)
 
-    for i, v in enumerate(values):
-        ax.text(v + 0.05, i, f"{v:.2f}%", va="center", fontsize=9)
+    for bar, val in zip(bars, values):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            val + 0.05,
+            f"{val:.2f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            fontweight="600"
+        )
 
     buf = BytesIO()
     plt.tight_layout()
