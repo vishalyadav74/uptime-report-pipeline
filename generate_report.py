@@ -104,7 +104,6 @@ Q_OUT = idx(quarterly_headers, "outage downtime")
 # KPI
 # =================================================
 weekly_uptimes = []
-
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     weekly_uptimes.append(float(r[W_UP].replace("%", "")))
@@ -131,6 +130,7 @@ if weekly_rows:
 # OUTAGES LIST
 # =================================================
 weekly_outages = []
+/color=""
 for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
@@ -149,34 +149,20 @@ if quarterly_rows and Q_OUT is not None:
 # ✅ FINAL VERTICAL GREEN GRAPH (95–100)
 # =================================================
 def bar_base64(accounts, values, ylabel):
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(6.8, 3.2))
 
     x = range(len(accounts))
-    bars = ax.bar(
-        x,
-        values,
-        color="#22c55e",
-        width=0.6
-    )
+    bars = ax.bar(x, values, color="#22c55e", width=0.55)
 
     ax.set_ylim(95, 100)
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(ylabel, fontsize=10)
+    ax.set_title("Weekly Uptime by Account", fontsize=11)
+
     ax.set_xticks(x)
-    ax.set_xticklabels(accounts, rotation=30, ha="right")
+    ax.set_xticklabels(accounts, rotation=30, ha="right", fontsize=9)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-
-    for bar, val in zip(bars, values):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            val + 0.03,
-            f"{val:.2f}%",
-            ha="center",
-            va="bottom",
-            fontsize=9,
-            fontweight="600"
-        )
 
     buf = BytesIO()
     plt.tight_layout()
