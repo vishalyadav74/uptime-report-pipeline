@@ -101,29 +101,42 @@ Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI
+# KPI CALCULATION
 # =================================================
 weekly_uptimes = []
+affected_accounts = []
+
 for r in weekly_rows:
     r[W_UP] = normalize_pct(r[W_UP])
     weekly_uptimes.append(float(r[W_UP].replace("%", "")))
 
-for r in quarterly_rows:
-    r[Q_UP] = normalize_pct(r[Q_UP])
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
+    if downtime_to_minutes(r[W_OUT]) > 0:
+        affected_accounts.append(r[W_ACC])
 
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
+outage_count = len(affected_accounts)
 total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
-outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
-major_incident = {"account": "N/A", "outage": "", "rca": ""}
-if weekly_rows:
-    major_row = max(weekly_rows, key=lambda r: downtime_to_minutes(r[W_OUT]))
+# =================================================
+# MOST AFFECTED ACCOUNT LOGIC (FIXED)
+# =================================================
+if affected_accounts:
+    affected_accounts_unique = sorted(set(affected_accounts))
+    affected_accounts_text = ", ".join(affected_accounts_unique)
+
+    major_row = max(
+        [r for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0],
+        key=lambda r: downtime_to_minutes(r[W_OUT])
+    )
+
     major_incident = {
         "account": major_row[W_ACC],
-        "outage": major_row[W_OUT],
-        "rca": major_row[W_RCA] if W_RCA is not None else ""
+        "hover": f"Affected accounts ({len(affected_accounts_unique)}): {affected_accounts_text}"
+    }
+else:
+    major_incident = {
+        "account": "N/A",
+        "hover": "No accounts affected in weekly"
     }
 
 # =================================================
@@ -174,28 +187,13 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
-# =================================================
-# ✅ QUARTERLY BAR – FINAL FIX
-# =================================================
 quarterly_bar = None
-
 if quarterly_rows and Q_YTD is not None:
-    q_accounts = []
-    q_values = []
-
-    for r in quarterly_rows:
-        try:
-            q_accounts.append(r[Q_ACC])
-            q_values.append(float(r[Q_YTD].replace("%", "")))
-        except:
-            pass
-
-    if q_accounts and q_values:
-        quarterly_bar = bar_base64(
-            q_accounts,
-            q_values,
-            "YTD Uptime (%)"
-        )
+    quarterly_bar = bar_base64(
+        [r[Q_ACC] for r in quarterly_rows],
+        [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
+        "YTD Uptime (%)"
+    )
 
 # =================================================
 # TABLES
