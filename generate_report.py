@@ -156,7 +156,11 @@ def bar_base64(accounts, values, ylabel):
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_bar = bar_base64([r[W_ACC] for r in weekly_rows], weekly_uptimes, "Uptime (%)")
+weekly_bar = bar_base64(
+    [r[W_ACC] for r in weekly_rows],
+    weekly_uptimes,
+    "Uptime (%)"
+)
 
 quarterly_bar = None
 if quarterly_rows and Q_YTD is not None:
@@ -167,17 +171,19 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# TABLES (FINAL – NO EXTRA / MISSING LINES)
+# TABLES (FINAL – PERFECT BORDERS)
 # =================================================
 def build_table(headers, rows):
     col_count = len(headers)
 
     html = (
         "<table width='100%' cellpadding='6' cellspacing='0' "
-        "style='border-collapse:separate;border-spacing:0;'>"
+        "style='border-collapse:separate;border-spacing:0;"
+        "border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;'>"
         "<tr>"
     )
 
+    # HEADER
     for i, h in enumerate(headers):
         rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
         html += (
@@ -189,6 +195,7 @@ def build_table(headers, rows):
         )
     html += "</tr>"
 
+    # ROWS
     for r in rows:
         html += "<tr>"
         for i, v in enumerate(r):
