@@ -53,7 +53,7 @@ def normalize_pct(val):
         return val
 
 # =================================================
-# READ SHEETS
+# READ SHEET
 # =================================================
 def read_sheet(sheet):
     wb = load_workbook(EXCEL_FILE, data_only=True)
@@ -75,25 +75,26 @@ if len(wb.sheetnames) > 1:
     quarterly_title, quarterly_headers, quarterly_rows = read_sheet(wb.sheetnames[1])
 
 # =================================================
-# INDEX
+# INDEX (LOOSE MATCH)
 # =================================================
 def idx(headers, *names):
     h = [x.lower() for x in headers]
-    for n in names:
-        if n.lower() in h:
-            return h.index(n.lower())
+    for i, col in enumerate(h):
+        for n in names:
+            if n.lower() in col:
+                return i
     return None
 
-W_ACC = idx(weekly_headers, "account", "account name")
-W_UP  = idx(weekly_headers, "uptime", "total uptime")
-W_OUT = idx(weekly_headers, "outage downtime")
+W_ACC = idx(weekly_headers, "account")
+W_UP  = idx(weekly_headers, "uptime")
+W_OUT = idx(weekly_headers, "outage")
 
-Q_ACC = idx(quarterly_headers, "account", "account name")
-Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
-Q_OUT = idx(quarterly_headers, "outage downtime")
+Q_ACC = idx(quarterly_headers, "account")
+Q_YTD = idx(quarterly_headers, "ytd", "uptime")
+Q_OUT = idx(quarterly_headers, "outage", "downtime")
 
 # =================================================
-# WEEKLY KPI + OUTAGES (REFERENCE LOGIC)
+# KPI (FIXED)
 # =================================================
 weekly_uptimes = []
 weekly_outages = []
@@ -114,7 +115,7 @@ if weekly_outages:
     major = max(weekly_outages, key=lambda x: x["mins"])
     major_incident = {
         "account": major["account"],
-        "hover": ", ".join([f'{o["account"]} ({o["mins"]} mins)' for o in weekly_outages])
+        "hover": ", ".join(f'{o["account"]} ({o["mins"]} mins)' for o in weekly_outages)
     }
 else:
     major_incident = {
@@ -123,19 +124,14 @@ else:
     }
 
 # =================================================
-# ✅ QUARTERLY – SAME LOGIC AS WEEKLY
+# QUARTERLY OUTAGES
 # =================================================
-quarterly_uptimes = []
 quarterly_outages = []
-
-for r in quarterly_rows:
-    if Q_YTD is not None:
-        r[Q_YTD] = normalize_pct(r[Q_YTD])
-        quarterly_uptimes.append(float(r[Q_YTD].replace("%", "")))
-
-    mins = downtime_to_minutes(r[Q_OUT])
-    if mins > 0:
-        quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
+if quarterly_rows and Q_OUT is not None:
+    for r in quarterly_rows:
+        mins = downtime_to_minutes(r[Q_OUT])
+        if mins > 0:
+            quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
 
 # =================================================
 # BAR GRAPH
@@ -163,16 +159,16 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
-quarterly_bar = None
-if quarterly_uptimes:
+quarterly_bar = ""
+if quarterly_rows and Q_YTD is not None:
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
-        quarterly_uptimes,
+        [float(normalize_pct(r[Q_YTD]).replace("%","")) for r in quarterly_rows],
         "YTD Uptime (%)"
     )
 
 # =================================================
-# TABLES (UNCHANGED)
+# TABLES
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -181,19 +177,13 @@ def build_table(headers, rows):
     html += "</tr>"
     for r in rows:
         html += "<tr>"
-        for h, v in zip(headers, r):
-            if "%" in str(v):
-                v = (
-                    "<span style='padding:2px 8px;border-radius:999px;"
-                    "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
-                    f"{v}</span>"
-                )
+        for v in r:
             html += f"<td>{v}</td>"
         html += "</tr>"
     return html + "</table>"
 
 weekly_table = build_table(weekly_headers, weekly_rows)
-quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
+quarterly_table = build_table(quarterly_headers, quarterly_rows)
 
 # =================================================
 # RENDER
@@ -213,10 +203,11 @@ html = template.render(
     weekly_bar=weekly_bar,
     quarterly_bar=quarterly_bar,
     weekly_outages=weekly_outages,
-    quarterly_outages=quarterly_outages
+    quarterly_outages=quarterly_outages,
+    quarterly_rows=quarterly_rows
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ FINAL REPORT GENERATED (Weekly + Quarterly SAME BEHAVIOUR)")
+print("✅ FINAL REPORT GENERATED")
