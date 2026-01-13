@@ -93,7 +93,7 @@ Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI CALCULATION (✅ FIXED)
+# WEEKLY KPI + OUTAGES (REFERENCE LOGIC)
 # =================================================
 weekly_uptimes = []
 weekly_outages = []
@@ -110,7 +110,6 @@ overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 outage_count = len(weekly_outages)
 total_downtime = sum(o["mins"] for o in weekly_outages)
 
-# ✅ MOST AFFECTED ACCOUNT – FINAL FIX
 if weekly_outages:
     major = max(weekly_outages, key=lambda x: x["mins"])
     major_incident = {
@@ -122,6 +121,21 @@ else:
         "account": "N/A",
         "hover": "No affected accounts"
     }
+
+# =================================================
+# ✅ QUARTERLY – SAME LOGIC AS WEEKLY
+# =================================================
+quarterly_uptimes = []
+quarterly_outages = []
+
+for r in quarterly_rows:
+    if Q_YTD is not None:
+        r[Q_YTD] = normalize_pct(r[Q_YTD])
+        quarterly_uptimes.append(float(r[Q_YTD].replace("%", "")))
+
+    mins = downtime_to_minutes(r[Q_OUT])
+    if mins > 0:
+        quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
 
 # =================================================
 # BAR GRAPH
@@ -149,8 +163,16 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
+quarterly_bar = None
+if quarterly_uptimes:
+    quarterly_bar = bar_base64(
+        [r[Q_ACC] for r in quarterly_rows],
+        quarterly_uptimes,
+        "YTD Uptime (%)"
+    )
+
 # =================================================
-# TABLE
+# TABLES (UNCHANGED)
 # =================================================
 def build_table(headers, rows):
     html = "<table class='uptime-table'><tr>"
@@ -159,12 +181,19 @@ def build_table(headers, rows):
     html += "</tr>"
     for r in rows:
         html += "<tr>"
-        for v in r:
+        for h, v in zip(headers, r):
+            if "%" in str(v):
+                v = (
+                    "<span style='padding:2px 8px;border-radius:999px;"
+                    "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
+                    f"{v}</span>"
+                )
             html += f"<td>{v}</td>"
         html += "</tr>"
     return html + "</table>"
 
 weekly_table = build_table(weekly_headers, weekly_rows)
+quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
 # =================================================
 # RENDER
@@ -173,17 +202,21 @@ with open("uptime_template.html", encoding="utf-8") as f:
     template = Template(f.read())
 
 html = template.render(
+    weekly_title=weekly_title,
+    quarterly_title=quarterly_title,
+    weekly_table=weekly_table,
+    quarterly_table=quarterly_table,
     overall_uptime=overall_uptime,
     outage_count=outage_count,
     total_downtime=total_downtime,
     major_incident=major_incident,
     weekly_bar=weekly_bar,
+    quarterly_bar=quarterly_bar,
     weekly_outages=weekly_outages,
-    weekly_title=weekly_title,
-    weekly_table=weekly_table
+    quarterly_outages=quarterly_outages
 )
 
 with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
     f.write(html)
 
-print("✅ FINAL REPORT GENERATED")
+print("✅ FINAL REPORT GENERATED (Weekly + Quarterly SAME BEHAVIOUR)")
