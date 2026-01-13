@@ -100,7 +100,7 @@ Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI CALCULATIONS
+# KPI CALCULATIONS (UNCHANGED)
 # =================================================
 weekly_uptimes = []
 for r in weekly_rows:
@@ -113,7 +113,6 @@ for r in quarterly_rows:
         r[Q_YTD] = normalize_pct(r[Q_YTD])
 
 overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
-total_downtime = sum(downtime_to_minutes(r[W_OUT]) for r in weekly_rows)
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
 # =================================================
@@ -124,6 +123,7 @@ for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
         weekly_outages.append({"account": r[W_ACC], "mins": mins})
+
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 quarterly_outages = []
@@ -134,8 +134,15 @@ if quarterly_rows and Q_OUT is not None:
             quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
+# =================================================
+# MOST AFFECTED ACCOUNT + DOWNTIME (FIX)
+# =================================================
 major_incident = {"account": weekly_outages[0]["account"] if weekly_outages else "N/A"}
 affected_accounts = [o["account"] for o in weekly_outages]
+
+most_affected_downtime = 0
+if weekly_outages:
+    most_affected_downtime = weekly_outages[0]["mins"]
 
 # =================================================
 # BAR GRAPH
@@ -171,11 +178,10 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# TABLES (FINAL – PERFECT BORDERS)
+# TABLES
 # =================================================
 def build_table(headers, rows):
     col_count = len(headers)
-
     html = (
         "<table width='100%' cellpadding='6' cellspacing='0' "
         "style='border-collapse:separate;border-spacing:0;"
@@ -183,7 +189,6 @@ def build_table(headers, rows):
         "<tr>"
     )
 
-    # HEADER
     for i, h in enumerate(headers):
         rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
         html += (
@@ -195,7 +200,6 @@ def build_table(headers, rows):
         )
     html += "</tr>"
 
-    # ROWS
     for r in rows:
         html += "<tr>"
         for i, v in enumerate(r):
