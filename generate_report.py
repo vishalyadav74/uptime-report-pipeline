@@ -137,16 +137,12 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# MOST AFFECTED ACCOUNT (FIXED)
+# MOST AFFECTED ACCOUNT
 # =================================================
-major_incident = {"account": "N/A", "outage": "", "rca": ""}
-
+major_incident = {"account": "N/A"}
 if weekly_outages:
     major_incident["account"] = weekly_outages[0]["account"]
 
-# =================================================
-# AFFECTED ACCOUNTS (FOR KPI TOOLTIP)
-# =================================================
 affected_accounts = [o["account"] for o in weekly_outages]
 
 # =================================================
@@ -154,15 +150,11 @@ affected_accounts = [o["account"] for o in weekly_outages]
 # =================================================
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
-    x = range(len(accounts))
-
-    ax.bar(x, values, color="#22c55e", width=0.55)
+    ax.bar(range(len(accounts)), values, color="#22c55e", width=0.55)
     ax.set_ylim(95, 100)
     ax.set_ylabel(ylabel, fontsize=10)
-
-    ax.set_xticks(x)
+    ax.set_xticks(range(len(accounts)))
     ax.set_xticklabels(accounts, rotation=30, ha="right", fontsize=9)
-
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -170,7 +162,6 @@ def bar_base64(accounts, values, ylabel):
     plt.tight_layout()
     plt.savefig(buf, format="png", bbox_inches="tight")
     plt.close(fig)
-
     return base64.b64encode(buf.getvalue()).decode()
 
 weekly_bar = bar_base64(
@@ -179,9 +170,6 @@ weekly_bar = bar_base64(
     "Uptime (%)"
 )
 
-# =================================================
-# QUARTERLY BAR
-# =================================================
 quarterly_bar = None
 if quarterly_rows and Q_YTD is not None:
     q_accounts, q_values = [], []
@@ -191,17 +179,27 @@ if quarterly_rows and Q_YTD is not None:
             q_values.append(float(r[Q_YTD].replace("%", "")))
         except:
             pass
-
-    if q_accounts and q_values:
+    if q_accounts:
         quarterly_bar = bar_base64(q_accounts, q_values, "YTD Uptime (%)")
 
 # =================================================
-# TABLES
+# TABLES (FINAL – LIGHT LINES, PINK HEADER)
 # =================================================
 def build_table(headers, rows):
-    html = "<table class='uptime-table'><tr>"
+    html = (
+        "<table width='100%' cellpadding='6' cellspacing='0' "
+        "style='border-collapse:collapse;'>"
+        "<tr>"
+    )
+
     for h in headers:
-        html += f"<th>{h}</th>"
+        html += (
+            "<th style='background:#e01e7e;color:#ffffff;"
+            "border-bottom:1px solid #e5e7eb;"
+            "border-right:1px solid #f1f5f9;"
+            "font-size:12px;font-weight:600;'>"
+            f"{h}</th>"
+        )
     html += "</tr>"
 
     for r in rows:
@@ -213,7 +211,13 @@ def build_table(headers, rows):
                     "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
                     f"{v}</span>"
                 )
-            html += f"<td>{v}</td>"
+
+            html += (
+                "<td style='border-bottom:1px solid #e5e7eb;"
+                "border-right:1px solid #f1f5f9;"
+                "font-size:12px;'>"
+                f"{v}</td>"
+            )
         html += "</tr>"
 
     return html + "</table>"
