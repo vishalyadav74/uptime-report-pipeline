@@ -68,51 +68,13 @@
       padding: 14px 18px;
       font-size: 12px;
     }
-
-    /* ✅ OUTAGES BOARD – EXACT FINAL STYLE */
-    .outage-board {
-      background: #ffffff;
-      border-left: 4px solid #dc2626;
-      padding: 14px 16px;
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.08);
-      width: 92%;
-    }
-
-    .outage-title {
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .outage-sep {
-      height: 1px;
-      background: #e5e7eb;
-      margin-bottom: 8px;
-    }
-
-    .outage-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    .outage-mins {
-      color: #dc2626;
-      font-weight: 600;
-    }
-
-    .outage-none {
-      color: #16a34a;
-      font-weight: 600;
-      font-size: 13px;
-    }
   </style>
 </head>
 
 <body>
 <table width="100%" cellpadding="0" cellspacing="0">
-<tr><td align="center">
+<tr>
+<td align="center">
 
 <table class="container" width="100%">
 
@@ -120,7 +82,7 @@
 <tr>
 <td class="header">
   <div class="header-title">SaaS Accounts Application Uptime Report</div>
-  <div class="header-subtitle">Weekly & Quarterly Application Availability Summary</div>
+  <div class="header-subtitle">Weekly Application Availability Summary</div>
 </td>
 </tr>
 
@@ -141,11 +103,11 @@
   </td>
 
   <td class="kpi" title="{{ major_incident.hover }}">
-    <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
+    <div class="kpi-value purple">🚩 {{ major_incident.account }}</div>
     Most Affected Account
   </td>
 
-  <td class="kpi" title="Outage downtime for the most affected account">
+  <td class="kpi" title="Total outage downtime in minutes">
     <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
     Outage Downtime
   </td>
@@ -163,28 +125,42 @@
 <table width="100%">
 <tr>
 
-<td width="70%">
-  <img src="data:image/png;base64,{{ weekly_bar }}" style="width:100%;max-width:700px;">
+<td width="70%" valign="top">
+  <img src="data:image/png;base64,{{ weekly_bar }}"
+       width="100%"
+       style="max-width:700px;display:block;">
 </td>
 
-<td width="30%">
-  <div class="outage-board">
-    <div class="outage-title">Outages</div>
-    <div class="outage-sep"></div>
+<td width="30%" valign="top">
 
-    {% if weekly_outages %}
-      {% for o in weekly_outages %}
-        <div class="outage-row">
-          <span>{{ o.account }}</span>
-          <span class="outage-mins">{{ o.mins }} mins</span>
-        </div>
-      {% endfor %}
-    {% else %}
-      <div class="outage-none">No outages reported</div>
-    {% endif %}
+<!-- OUTAGES BOARD (FINAL – SAME AS YOU LIKED) -->
+<div style="
+  background:#ffffff;
+  border-left:4px solid #dc2626;
+  padding:14px 16px;
+  border-radius:6px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+">
+  <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:6px;">
+    Outages
   </div>
-</td>
+  <div style="height:1px;background:#e5e7eb;margin-bottom:8px;"></div>
 
+  {% if weekly_outages %}
+    {% for o in weekly_outages %}
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+        <span>{{ o.account }}</span>
+        <span style="font-weight:600;color:#dc2626;">{{ o.mins }} mins</span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div style="color:#16a34a;font-weight:600;font-size:13px;">
+      No outages reported
+    </div>
+  {% endif %}
+</div>
+
+</td>
 </tr>
 </table>
 </td>
@@ -193,76 +169,30 @@
 <!-- WEEKLY TABLE -->
 <tr>
 <td class="section">
-<div class="section-header">{{ weekly_title }}</div>
-{{ weekly_table | safe }}
+  <div class="section-header">{{ weekly_title }}</div>
+  {{ weekly_table | safe }}
 </td>
 </tr>
-
-<!-- QUARTERLY GRAPH -->
-{% if quarterly_bar %}
-<tr>
-<td class="section">
-<div class="section-header">Quarterly YTD Uptime by Account</div>
-
-<table width="100%">
-<tr>
-
-<td width="70%">
-  <img src="data:image/png;base64,{{ quarterly_bar }}" style="width:100%;max-width:700px;">
-</td>
-
-<td width="30%">
-  <div class="outage-board">
-    <div class="outage-title">Outages</div>
-    <div class="outage-sep"></div>
-
-    {% if quarterly_outages %}
-      {% for o in quarterly_outages %}
-        <div class="outage-row">
-          <span>{{ o.account }}</span>
-          <span class="outage-mins">{{ o.mins }} mins</span>
-        </div>
-      {% endfor %}
-    {% else %}
-      <div class="outage-none">No outages reported</div>
-    {% endif %}
-  </div>
-</td>
-
-</tr>
-</table>
-</td>
-</tr>
-{% endif %}
-
-<!-- QUARTERLY TABLE -->
-{% if quarterly_table %}
-<tr>
-<td class="section">
-<div class="section-header">{{ quarterly_title }}</div>
-{{ quarterly_table | safe }}
-</td>
-</tr>
-{% endif %}
 
 <!-- FOOTER -->
 <tr>
 <td class="footer">
-For any concern over above statistics contact
-<a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
+  For any concern contact
+  <a href="mailto:incident@businessnext.com">incident@businessnext.com</a><br><br>
 
-Best Regards,<br>
-Atin Gambhir | Manager – ITSM (CDG)<br>
+  Best Regards,<br>
+  Atin Gambhir | Manager – ITSM (CDG)<br>
 
-<img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
-www.businessnext.com<br>
+  <img src="cid:businessnext_logo" width="90" style="margin-top:6px"><br>
+  www.businessnext.com<br>
 
-<b style="color:#e01e7e;">#UpForTomorrow</b>
+  <b style="color:#e01e7e;">#UpForTomorrow</b>
 </td>
 </tr>
 
 </table>
-</td></tr>
+</td>
+</tr>
 </table>
 </body>
 </html>
