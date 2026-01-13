@@ -92,21 +92,25 @@
 <table width="100%" cellspacing="8">
 <tr>
 
+  <!-- KPI 1 -->
   <td class="kpi" title="Weekly Uptime Avg of all accounts">
     <div class="kpi-value green">✔ {{ overall_uptime }}</div>
     Overall Uptime Avg
   </td>
 
+  <!-- KPI 2 -->
   <td class="kpi" title="Total outages in weekly">
     <div class="kpi-value red">⚠ {{ outage_count }}</div>
     Outages
   </td>
 
+  <!-- KPI 3 -->
   <td class="kpi" title="{{ major_incident.hover }}">
-    <div class="kpi-value purple">🚩 {{ major_incident.account }}</div>
+    <div class="kpi-value purple">🚩 {{ major_incident.account or 'N/A' }}</div>
     Most Affected Account
   </td>
 
+  <!-- KPI 4 -->
   <td class="kpi" title="Total outage downtime in minutes">
     <div class="kpi-value orange">⏱ {{ total_downtime }} mins</div>
     Outage Downtime
@@ -133,7 +137,7 @@
 
 <td width="30%" valign="top">
 
-<!-- OUTAGES BOARD (FINAL – SAME AS YOU LIKED) -->
+<!-- OUTAGES BOARD -->
 <div style="
   background:#ffffff;
   border-left:4px solid #dc2626;
