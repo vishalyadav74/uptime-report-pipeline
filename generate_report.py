@@ -93,7 +93,6 @@ def idx(headers, *names):
 W_ACC = idx(weekly_headers, "account", "account name")
 W_UP  = idx(weekly_headers, "uptime", "total uptime")
 W_OUT = idx(weekly_headers, "outage downtime")
-W_RCA = idx(weekly_headers, "rca")
 
 Q_ACC = idx(quarterly_headers, "account", "account name")
 Q_UP  = idx(quarterly_headers, "uptime", "total uptime")
@@ -125,7 +124,6 @@ for r in weekly_rows:
     mins = downtime_to_minutes(r[W_OUT])
     if mins > 0:
         weekly_outages.append({"account": r[W_ACC], "mins": mins})
-
 weekly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 quarterly_outages = []
@@ -136,13 +134,7 @@ if quarterly_rows and Q_OUT is not None:
             quarterly_outages.append({"account": r[Q_ACC], "mins": mins})
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
-# =================================================
-# MOST AFFECTED ACCOUNT
-# =================================================
-major_incident = {"account": "N/A"}
-if weekly_outages:
-    major_incident["account"] = weekly_outages[0]["account"]
-
+major_incident = {"account": weekly_outages[0]["account"] if weekly_outages else "N/A"}
 affected_accounts = [o["account"] for o in weekly_outages]
 
 # =================================================
@@ -164,58 +156,53 @@ def bar_base64(accounts, values, ylabel):
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode()
 
-weekly_bar = bar_base64(
-    [r[W_ACC] for r in weekly_rows],
-    weekly_uptimes,
-    "Uptime (%)"
-)
+weekly_bar = bar_base64([r[W_ACC] for r in weekly_rows], weekly_uptimes, "Uptime (%)")
 
 quarterly_bar = None
 if quarterly_rows and Q_YTD is not None:
-    q_accounts, q_values = [], []
-    for r in quarterly_rows:
-        try:
-            q_accounts.append(r[Q_ACC])
-            q_values.append(float(r[Q_YTD].replace("%", "")))
-        except:
-            pass
-    if q_accounts:
-        quarterly_bar = bar_base64(q_accounts, q_values, "YTD Uptime (%)")
+    quarterly_bar = bar_base64(
+        [r[Q_ACC] for r in quarterly_rows],
+        [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
+        "YTD Uptime (%)"
+    )
 
 # =================================================
-# TABLES (FINAL – LIGHT LINES, PINK HEADER)
+# TABLES (FINAL – NO EXTRA / MISSING LINES)
 # =================================================
 def build_table(headers, rows):
+    col_count = len(headers)
+
     html = (
         "<table width='100%' cellpadding='6' cellspacing='0' "
-        "style='border-collapse:collapse;'>"
+        "style='border-collapse:separate;border-spacing:0;'>"
         "<tr>"
     )
 
-    for h in headers:
+    for i, h in enumerate(headers):
+        rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
         html += (
             "<th style='background:#e01e7e;color:#ffffff;"
+            "font-size:12px;font-weight:600;"
             "border-bottom:1px solid #e5e7eb;"
-            "border-right:1px solid #f1f5f9;"
-            "font-size:12px;font-weight:600;'>"
+            f"{rb}'>"
             f"{h}</th>"
         )
     html += "</tr>"
 
     for r in rows:
         html += "<tr>"
-        for v in r:
+        for i, v in enumerate(r):
             if "%" in str(v):
                 v = (
                     "<span style='padding:2px 8px;border-radius:999px;"
                     "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
                     f"{v}</span>"
                 )
-
+            rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
             html += (
-                "<td style='border-bottom:1px solid #e5e7eb;"
-                "border-right:1px solid #f1f5f9;"
-                "font-size:12px;'>"
+                "<td style='font-size:12px;"
+                "border-bottom:1px solid #e5e7eb;"
+                f"{rb}'>"
                 f"{v}</td>"
             )
         html += "</tr>"
