@@ -150,7 +150,7 @@ if weekly_outages:
 def bar_base64(accounts, values, ylabel):
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
     ax.bar(range(len(accounts)), values, color="#22c55e", width=0.55)
-    ax.set_ylim(95, 100)
+    ax.set_ylim(98, 100)
     ax.set_ylabel(ylabel, fontsize=10)
     ax.set_xticks(range(len(accounts)))
     ax.set_xticklabels(accounts, rotation=30, ha="right", fontsize=9)
