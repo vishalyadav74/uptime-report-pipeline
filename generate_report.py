@@ -1,5 +1,6 @@
 # SaaS Uptime Report
 
+from openpyxl import load_workbook
 from jinja2 import Template
 import os, glob, re, base64
 from datetime import datetime
