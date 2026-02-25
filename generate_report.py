@@ -100,7 +100,7 @@ Q_YTD = idx(quarterly_headers, "ytd", "ytd uptime")
 Q_OUT = idx(quarterly_headers, "outage downtime")
 
 # =================================================
-# KPI CALCULATIONS (UNCHANGED)
+# KPI CALCULATIONS
 # =================================================
 weekly_uptimes = []
 for r in weekly_rows:
@@ -116,7 +116,7 @@ overall_uptime = f"{sum(weekly_uptimes)/len(weekly_uptimes):.2f}%"
 outage_count = sum(1 for r in weekly_rows if downtime_to_minutes(r[W_OUT]) > 0)
 
 # =================================================
-# OUTAGES LIST
+# OUTAGES
 # =================================================
 weekly_outages = []
 for r in weekly_rows:
@@ -135,34 +135,60 @@ if quarterly_rows and Q_OUT is not None:
     quarterly_outages.sort(key=lambda x: x["mins"], reverse=True)
 
 # =================================================
-# MOST AFFECTED ACCOUNT + DOWNTIME (FIX)
+# INCIDENT SUMMARY
 # =================================================
 major_incident = {"account": weekly_outages[0]["account"] if weekly_outages else "N/A"}
 affected_accounts = [o["account"] for o in weekly_outages]
-
-most_affected_downtime = 0
-if weekly_outages:
-    most_affected_downtime = weekly_outages[0]["mins"]
+most_affected_downtime = weekly_outages[0]["mins"] if weekly_outages else 0
 
 # =================================================
-# BAR GRAPH
+# GRAPH FUNCTION (UPDATED WITH VALUE LABELS)
 # =================================================
 def bar_base64(accounts, values, ylabel):
+
     fig, ax = plt.subplots(figsize=(6.8, 3.2))
-    ax.bar(range(len(accounts)), values, color="#22c55e", width=0.55)
-    ax.set_ylim(99, 100)
+
+    bars = ax.bar(range(len(accounts)), values, color="#22c55e", width=0.55)
+
+    # Dynamic zoom for better visualization
+    ax.set_ylim(min(values) - 0.05, 100)
+
     ax.set_ylabel(ylabel, fontsize=10)
     ax.set_xticks(range(len(accounts)))
     ax.set_xticklabels(accounts, rotation=30, ha="right", fontsize=9)
+
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
+    # VALUE LABELS INSIDE BAR
+    for bar, val in zip(bars, values):
+
+        label = f"{val:.2f}"
+
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            val - 0.02,
+            label,
+            ha="center",
+            va="top",
+            fontsize=8,
+            color="white",
+            fontweight="bold"
+        )
+
     buf = BytesIO()
+
     plt.tight_layout()
-    plt.savefig(buf, format="png", bbox_inches="tight")
+
+    plt.savefig(buf, format="png", bbox_inches="tight", dpi=200)
+
     plt.close(fig)
+
     return base64.b64encode(buf.getvalue()).decode()
 
+# =================================================
+# GENERATE GRAPHS
+# =================================================
 weekly_bar = bar_base64(
     [r[W_ACC] for r in weekly_rows],
     weekly_uptimes,
@@ -170,7 +196,9 @@ weekly_bar = bar_base64(
 )
 
 quarterly_bar = None
+
 if quarterly_rows and Q_YTD is not None:
+
     quarterly_bar = bar_base64(
         [r[Q_ACC] for r in quarterly_rows],
         [float(r[Q_YTD].replace("%", "")) for r in quarterly_rows],
@@ -178,74 +206,83 @@ if quarterly_rows and Q_YTD is not None:
     )
 
 # =================================================
-# TABLES
+# BUILD TABLE
 # =================================================
 def build_table(headers, rows):
-    col_count = len(headers)
-    html = (
-        "<table width='100%' cellpadding='6' cellspacing='0' "
-        "style='border-collapse:separate;border-spacing:0;"
-        "border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;'>"
-        "<tr>"
-    )
 
-    for i, h in enumerate(headers):
-        rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
-        html += (
-            "<th style='background:#e01e7e;color:#ffffff;"
-            "font-size:12px;font-weight:600;"
-            "border-bottom:1px solid #e5e7eb;"
-            f"{rb}'>"
-            f"{h}</th>"
-        )
+    html = "<table width='100%' cellpadding='6' cellspacing='0' style='border-collapse:collapse;'>"
+
+    html += "<tr>"
+
+    for h in headers:
+
+        html += f"<th style='background:#e01e7e;color:white;font-size:12px'>{h}</th>"
+
     html += "</tr>"
 
     for r in rows:
+
         html += "<tr>"
-        for i, v in enumerate(r):
+
+        for v in r:
+
             if "%" in str(v):
-                v = (
-                    "<span style='padding:2px 8px;border-radius:999px;"
-                    "background:#dcfce7;color:#16a34a;font-weight:600;'>✔ "
-                    f"{v}</span>"
-                )
-            rb = "border-right:1px solid #f1f5f9;" if i < col_count - 1 else ""
-            html += (
-                "<td style='font-size:12px;"
-                "border-bottom:1px solid #e5e7eb;"
-                f"{rb}'>"
-                f"{v}</td>"
-            )
+
+                v = f"<b style='color:#16a34a'>{v}</b>"
+
+            html += f"<td style='font-size:12px'>{v}</td>"
+
         html += "</tr>"
 
-    return html + "</table>"
+    html += "</table>"
+
+    return html
 
 weekly_table = build_table(weekly_headers, weekly_rows)
+
 quarterly_table = build_table(quarterly_headers, quarterly_rows) if quarterly_rows else ""
 
 # =================================================
 # RENDER HTML
 # =================================================
 with open("uptime_template.html", encoding="utf-8") as f:
+
     template = Template(f.read())
 
 html = template.render(
+
     weekly_title=weekly_title,
+
     quarterly_title=quarterly_title,
+
     weekly_table=weekly_table,
+
     quarterly_table=quarterly_table,
+
     overall_uptime=overall_uptime,
+
     outage_count=outage_count,
+
     total_downtime=most_affected_downtime,
+
     major_incident=major_incident,
+
     weekly_bar=weekly_bar,
+
     quarterly_bar=quarterly_bar,
+
     weekly_outages=weekly_outages,
+
     quarterly_outages=quarterly_outages,
+
     affected_accounts=affected_accounts
+
 )
 
-with open(os.path.join(OUTPUT_DIR, "uptime_report.html"), "w", encoding="utf-8") as f:
+output_file = os.path.join(OUTPUT_DIR, "uptime_report.html")
+
+with open(output_file, "w", encoding="utf-8") as f:
+
     f.write(html)
 
-print("✅ FINAL REPORT GENERATED SUCCESSFULLY")
+print("✅ FINAL REPORT GENERATED:", output_file)
